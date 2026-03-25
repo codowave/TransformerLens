@@ -53,7 +53,10 @@ SYSTEM_PROMPT = f"""あなたはエマニュエル・スウェーデンボルグ
 スウェーデンボルグの主な著作：天界の秘義(AC)、天界と地獄(HH)、神の愛と知恵(DLW)、黙示録の解説(AE)
 """
 
-client_ai = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+api_key = os.environ.get("ANTHROPIC_API_KEY")
+if not api_key:
+    raise RuntimeError("ANTHROPIC_API_KEY is not set")
+client_ai = anthropic.AsyncAnthropic(api_key=api_key)
 
 
 class ChatRequest(BaseModel):
@@ -61,12 +64,12 @@ class ChatRequest(BaseModel):
     history: list[dict] = []
 
 
-def stream_response(request: ChatRequest):
+async def stream_response(request: ChatRequest):
     """Claude API からストリーミングレスポンスを生成"""
     messages = request.history.copy()
     messages.append({"role": "user", "content": request.message})
 
-    with client_ai.messages.stream(
+    async with client_ai.messages.stream(
         model="claude-opus-4-6",
         max_tokens=2048,
         thinking={"type": "adaptive"},
@@ -79,7 +82,7 @@ def stream_response(request: ChatRequest):
         ],
         messages=messages,
     ) as stream:
-        for event in stream:
+        async for event in stream:
             if event.type == "content_block_delta":
                 if event.delta.type == "text_delta":
                     # SSE 形式で送信
@@ -111,10 +114,10 @@ async def search_dictionary(q: str):
     q_lower = q.lower()
     results = [
         e for e in DICTIONARY["entries"]
-        if q_lower in e["word"]
-        or q_lower in e["spiritual"]
-        or q_lower in e.get("literal", "")
-        or q_lower in e.get("category", "")
+        if q_lower in e.get("word", "").lower()
+        or q_lower in e.get("spiritual", "").lower()
+        or q_lower in e.get("literal", "").lower()
+        or q_lower in e.get("category", "").lower()
     ]
     return {"results": results, "count": len(results)}
 

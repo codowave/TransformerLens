@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#1a237e">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -444,22 +444,26 @@
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullText = '';
+      let carry = '';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') break;
-            try {
-              const { text: delta } = JSON.parse(data);
-              fullText += delta;
-              aiBubble.querySelector('.bubble').textContent = fullText;
-              scrollToBottom();
-            } catch {}
+        carry += decoder.decode(value, { stream: true });
+        const parts = carry.split('\n\n');
+        carry = parts.pop(); // 末尾の未完成チャンクを次回に持ち越し
+        for (const part of parts) {
+          for (const line of part.split('\n')) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') break;
+              try {
+                const { text: delta } = JSON.parse(data);
+                fullText += delta;
+                aiBubble.querySelector('.bubble').textContent = fullText;
+                scrollToBottom();
+              } catch(e) { console.error('SSE parse error:', e, data); }
+            }
           }
         }
       }
@@ -469,6 +473,8 @@
     } catch (err) {
       typingEl?.remove();
       aiBubble.querySelector('.bubble').textContent = 'エラーが発生しました。再度お試しください。';
+      // 会話履歴をロールバック（追加したユーザーメッセージを取り消す）
+      conversationHistory.pop();
     }
 
     isStreaming = false;
