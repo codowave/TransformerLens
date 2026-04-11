@@ -21,3 +21,8 @@ docs/source/generated
 # docs/source/_static/model_table
 **.orig
 .venv
+
+# biblical_correspondence: external morphological data (clone separately per README)
+biblical_correspondence/data/morphhb/
+biblical_correspondence/data/sblgnt/
+biblical_correspondence/data/morphgnt/
