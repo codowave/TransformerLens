@@ -516,7 +516,12 @@
   }
 
   function escapeHtml(text) {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   // 辞典読み込み
@@ -534,36 +539,43 @@
   function filterDict(query) {
     const q = query.toLowerCase();
     const filtered = q ? allEntries.filter(e =>
-      e.word.includes(q) ||
-      (e.spiritual || '').includes(q) ||
-      (e.literal || '').includes(q) ||
-      (e.category || '').includes(q)
+      (e.word || '').toLowerCase().includes(q) ||
+      (e.spiritual || '').toLowerCase().includes(q) ||
+      (e.literal || '').toLowerCase().includes(q) ||
+      (e.category || '').toLowerCase().includes(q)
     ) : allEntries;
     renderDict(filtered);
   }
 
   function renderDict(entries) {
     const list = document.getElementById('dict-list');
+    list.innerHTML = '';
+
     if (!entries.length) {
       list.innerHTML = '<p style="padding:20px;text-align:center;color:#999">見つかりませんでした</p>';
       return;
     }
-    list.innerHTML = entries.map(e => `
-      <div class="dict-entry" onclick="askAbout('${escapeHtml(e.word)}')">
-        <div class="entry-word">${e.word}</div>
-        <span class="entry-category">${e.category}</span>
+
+    entries.forEach(e => {
+      const entryEl = document.createElement('div');
+      entryEl.className = 'dict-entry';
+      entryEl.innerHTML = `
+        <div class="entry-word">${escapeHtml(e.word)}</div>
+        <span class="entry-category">${escapeHtml(e.category)}</span>
         <div class="entry-row">
           <span class="entry-label">字　義</span>
-          <span class="entry-value">${e.literal || '—'}</span>
+          <span class="entry-value">${escapeHtml(e.literal || '—')}</span>
         </div>
         <div class="entry-row">
           <span class="entry-label">霊的内意</span>
-          <span class="entry-value">${e.spiritual}</span>
+          <span class="entry-value">${escapeHtml(e.spiritual)}</span>
         </div>
-        <div class="entry-shift">💡 ${e.value_shift}</div>
-        <div class="entry-ref">📚 ${e.reference}</div>
-      </div>
-    `).join('');
+        <div class="entry-shift">💡 ${escapeHtml(e.value_shift)}</div>
+        <div class="entry-ref">📚 ${escapeHtml(e.reference)}</div>
+      `;
+      entryEl.addEventListener('click', () => askAbout(e.word));
+      list.appendChild(entryEl);
+    });
   }
 
   // 辞典エントリをタップしてチャットで詳しく聞く
