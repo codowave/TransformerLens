@@ -278,25 +278,51 @@ def lookup_verse(ref: str) -> Verse:
 def verify_verse(ref: str, strongs_id: str) -> dict:
     """Return whether a Strong's ID appears in a verse.
 
-    The canonical sanity check:
-      verify_verse("Gen.3.5",  "H3045") → contains: True
-      verify_verse("Gen.32.29","H3045") → contains: False
+    Returns a three-state result — callers MUST check "status", not just "contains":
+
+        status="found"       contains=True   — word confirmed present
+        status="not_found"   contains=False  — word confirmed absent (data was available)
+        status="unavailable" contains=None   — morphological data not present; absence
+                                               cannot be asserted
+
+    Conflating "not_found" and "unavailable" via contains=False would cause
+    downstream injection to tell Claude a word is absent when the data simply
+    isn't loaded — this is the canonical Codex P1 bug this function prevents.
     """
     sid = strongs_id.upper()
     try:
         verse = lookup_verse(ref)
-    except (FileNotFoundError, KeyError, ValueError) as exc:
-        return {"ref": ref, "strongs": sid, "contains": False,
-                "occurrences": 0, "error": str(exc)}
+    except FileNotFoundError as exc:
+        return {
+            "status": "unavailable",
+            "contains": None,
+            "ref": ref,
+            "strongs": sid,
+            "occurrences": 0,
+            "reason": "morphhb_not_available",
+            "error": str(exc),
+        }
+    except (KeyError, ValueError) as exc:
+        return {
+            "status": "unavailable",
+            "contains": None,
+            "ref": ref,
+            "strongs": sid,
+            "occurrences": 0,
+            "reason": "ref_not_found",
+            "error": str(exc),
+        }
 
     matching = [
         w for w in verse.words if sid in [s.upper() for s in w.strongs]
     ]
+    found = len(matching) > 0
     return {
+        "status": "found" if found else "not_found",
+        "contains": found,
         "ref": ref,
         "strongs": sid,
         "language": verse.language,
-        "contains": len(matching) > 0,
         "occurrences": len(matching),
         "words": [
             {"surface": w.surface, "translit": w.translit, "morph": w.morph}
