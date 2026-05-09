@@ -13,7 +13,10 @@ from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from lexicon.lexicon_router import router as lexicon_router
+
 app = FastAPI(title="スウェーデンボルグ相応の辞典")
+app.include_router(lexicon_router, prefix="/api/lexicon")
 
 # 辞典データを起動時に読み込む
 DICT_PATH = Path(__file__).parent / "data" / "dictionary.json"
