@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a237e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>相応の辞典</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #1a237e;
+      --primary-light: #3949ab;
+      --accent: #c5a028;
+      --bg: #f5f0e8;
+      --surface: #fff;
+      --text: #1a1a2e;
+      --text-muted: #666;
+      --bubble-user: #1a237e;
+      --bubble-ai: #fff;
+      --border: #d4c9a8;
+      --shadow: 0 2px 12px rgba(0,0,0,0.12);
+    }
+
+    body {
+      font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ヘッダー */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      box-shadow: var(--shadow);
+    }
+    header .icon { font-size: 24px; }
+    header .title-group { flex: 1; }
+    header h1 { font-size: 17px; font-weight: 700; letter-spacing: 0.5px; }
+    header p { font-size: 11px; opacity: 0.8; margin-top: 1px; }
+    header .search-btn {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* タブ */
+    .tabs {
+      display: flex;
+      background: var(--primary);
+      flex-shrink: 0;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* パネル */
+    .panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+    .panel.active { display: flex; }
+
+    /* チャットパネル */
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .message {
+      display: flex;
+      flex-direction: column;
+      max-width: 85%;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    .message.user { align-self: flex-end; align-items: flex-end; }
+    .message.ai { align-self: flex-start; align-items: flex-start; }
+
+    .bubble {
+      padding: 11px 15px;
+      border-radius: 18px;
+      font-size: 15px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .message.user .bubble {
+      background: var(--bubble-user);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .message.ai .bubble {
+      background: var(--bubble-ai);
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    .message .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+      padding: 0 4px;
+    }
+
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 12px 15px;
+      background: var(--bubble-ai);
+      border-radius: 18px;
+      border-bottom-left-radius: 4px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      width: fit-content;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      background: var(--primary-light);
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,60%,100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    /* 入力エリア */
+    .chat-input-area {
+      padding: 10px 12px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    #user-input {
+      flex: 1;
+      border: 1.5px solid var(--border);
+      border-radius: 22px;
+      padding: 10px 16px;
+      font-size: 15px;
+      font-family: inherit;
+      resize: none;
+      min-height: 42px;
+      max-height: 120px;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      -webkit-appearance: none;
+    }
+    #user-input:focus { border-color: var(--primary-light); }
+    #send-btn {
+      width: 42px; height: 42px;
+      background: var(--primary);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    #send-btn:disabled { background: #aaa; }
+    #send-btn:active { background: var(--primary-light); }
+
+    /* 辞典パネル */
+    #dict-panel {
+      display: none;
+      flex: 1;
+      overflow: hidden;
+      flex-direction: column;
+    }
+    #dict-panel.active { display: flex; }
+
+    .dict-search {
+      padding: 10px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .dict-search input {
+      width: 100%;
+      padding: 9px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 22px;
+      font-size: 15px;
+      background: var(--bg);
+      outline: none;
+    }
+    .dict-search input:focus { border-color: var(--primary-light); }
+
+    #dict-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .dict-entry {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: box-shadow 0.2s;
+    }
+    .dict-entry:active { box-shadow: var(--shadow); }
+
+    .entry-word {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+    .entry-category {
+      display: inline-block;
+      font-size: 11px;
+      background: var(--primary);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .entry-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 4px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .entry-label {
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 56px;
+      flex-shrink: 0;
+    }
+    .entry-value { color: var(--text); }
+    .entry-shift {
+      margin-top: 6px;
+      padding: 7px 10px;
+      background: #f0ede0;
+      border-left: 3px solid var(--accent);
+      border-radius: 0 6px 6px 0;
+      font-size: 12px;
+      color: #555;
+      line-height: 1.6;
+    }
+    .entry-ref {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    /* ウェルカムメッセージ */
+    .welcome {
+      text-align: center;
+      padding: 32px 20px;
+      color: var(--text-muted);
+    }
+    .welcome .emoji { font-size: 48px; margin-bottom: 12px; }
+    .welcome h2 { font-size: 17px; color: var(--primary); margin-bottom: 8px; }
+    .welcome p { font-size: 13px; line-height: 1.7; }
+    .suggestions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 20px;
+    }
+    .suggestion-btn {
+      background: var(--surface);
+      border: 1.5px solid var(--primary);
+      color: var(--primary);
+      padding: 10px 14px;
+      border-radius: 22px;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+    }
+    .suggestion-btn:active { background: var(--primary); color: white; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="icon">✦</div>
+  <div class="title-group">
+    <h1>相応の辞典</h1>
+    <p>スウェーデンボルグ 霊的内意</p>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('chat')">💬 対話</div>
+  <div class="tab" onclick="switchTab('dict')">📖 辞典</div>
+</div>
+
+<!-- チャットパネル -->
+<div id="chat-panel" class="panel active">
+  <div id="chat-messages">
+    <div class="welcome">
+      <div class="emoji">✦</div>
+      <h2>スウェーデンボルグ相応の辞典</h2>
+      <p>聖書の言葉の霊的内意について<br>何でも質問してください</p>
+      <div class="suggestions">
+        <button class="suggestion-btn" onclick="sendSuggestion('「水」の霊的内意を教えてください')">💧 「水」の霊的内意とは？</button>
+        <button class="suggestion-btn" onclick="sendSuggestion('「羊飼い」はスウェーデンボルグにとって何を意味しますか？')">🐑 「羊飼い」の相応は？</button>
+        <button class="suggestion-btn" onclick="sendSuggestion('「山に登る」という聖書の表現の霊的意味を教えてください')">⛰️ 「山に登る」の意味は？</button>
+        <button class="suggestion-btn" onclick="sendSuggestion('「光」と「闇」の対比をスウェーデンボルグはどう解釈しますか？')">☀️ 「光」と「闇」の対比</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-input-area">
+    <textarea id="user-input" placeholder="聖書の言葉を入力…" rows="1"
+      oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+    <button id="send-btn" onclick="sendMessage()">➤</button>
+  </div>
+</div>
+
+<!-- 辞典パネル -->
+<div id="dict-panel" class="panel">
+  <div class="dict-search">
+    <input type="search" id="dict-search-input" placeholder="キーワードで検索…"
+      oninput="filterDict(this.value)" />
+  </div>
+  <div id="dict-list"></div>
+</div>
+
+<script>
+  const API_BASE = '';
+  let conversationHistory = [];
+  let isStreaming = false;
+  let allEntries = [];
+
+  // タブ切り替え
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (i === 0 && tab === 'chat') || (i === 1 && tab === 'dict'));
+    });
+    document.getElementById('chat-panel').classList.toggle('active', tab === 'chat');
+    document.getElementById('dict-panel').classList.toggle('active', tab === 'dict');
+    if (tab === 'dict' && allEntries.length === 0) loadDictionary();
+  }
+
+  // テキストエリア自動リサイズ
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  // Enter送信（Shift+Enterは改行）
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  // サジェスト送信
+  function sendSuggestion(text) {
+    document.getElementById('user-input').value = text;
+    sendMessage();
+  }
+
+  // メッセージ送信
+  async function sendMessage() {
+    if (isStreaming) return;
+    const input = document.getElementById('user-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+
+    // ウェルカム画面を消す
+    const welcome = document.querySelector('.welcome');
+    if (welcome) welcome.remove();
+
+    // ユーザーバブル
+    appendMessage('user', text);
+    conversationHistory.push({ role: 'user', content: text });
+
+    // AI応答
+    isStreaming = true;
+    document.getElementById('send-btn').disabled = true;
+    const aiBubble = appendMessage('ai', '');
+    const typingEl = showTyping();
+
+    try {
+      const response = await fetch(`${API_BASE}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history: conversationHistory.slice(0, -1) })
+      });
+
+      typingEl.remove();
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let carry = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        carry += decoder.decode(value, { stream: true });
+        const parts = carry.split('\n\n');
+        carry = parts.pop(); // 末尾の未完成チャンクを次回に持ち越し
+        for (const part of parts) {
+          for (const line of part.split('\n')) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') break;
+              try {
+                const { text: delta } = JSON.parse(data);
+                fullText += delta;
+                aiBubble.querySelector('.bubble').textContent = fullText;
+                scrollToBottom();
+              } catch(e) { console.error('SSE parse error:', e, data); }
+            }
+          }
+        }
+      }
+
+      conversationHistory.push({ role: 'assistant', content: fullText });
+
+    } catch (err) {
+      typingEl?.remove();
+      aiBubble.querySelector('.bubble').textContent = 'エラーが発生しました。再度お試しください。';
+      // 会話履歴をロールバック（追加したユーザーメッセージを取り消す）
+      conversationHistory.pop();
+    }
+
+    isStreaming = false;
+    document.getElementById('send-btn').disabled = false;
+    scrollToBottom();
+  }
+
+  function appendMessage(role, text) {
+    const container = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+    div.innerHTML = `
+      <div class="label">${role === 'user' ? 'あなた' : '✦ 霊的案内人'}</div>
+      <div class="bubble">${escapeHtml(text)}</div>
+    `;
+    container.appendChild(div);
+    scrollToBottom();
+    return div;
+  }
+
+  function showTyping() {
+    const container = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'message ai';
+    div.innerHTML = `
+      <div class="label">✦ 霊的案内人</div>
+      <div class="typing-indicator">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+    `;
+    container.appendChild(div);
+    scrollToBottom();
+    return div;
+  }
+
+  function scrollToBottom() {
+    const c = document.getElementById('chat-messages');
+    c.scrollTop = c.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // 辞典読み込み
+  async function loadDictionary() {
+    try {
+      const res = await fetch('/api/dictionary');
+      const data = await res.json();
+      allEntries = data.entries;
+      renderDict(allEntries);
+    } catch (e) {
+      document.getElementById('dict-list').innerHTML = '<p style="padding:20px;color:#999">読み込めませんでした</p>';
+    }
+  }
+
+  function filterDict(query) {
+    const q = query.toLowerCase();
+    const filtered = q ? allEntries.filter(e =>
+      (e.word || '').toLowerCase().includes(q) ||
+      (e.spiritual || '').toLowerCase().includes(q) ||
+      (e.literal || '').toLowerCase().includes(q) ||
+      (e.category || '').toLowerCase().includes(q)
+    ) : allEntries;
+    renderDict(filtered);
+  }
+
+  function renderDict(entries) {
+    const list = document.getElementById('dict-list');
+    list.innerHTML = '';
+
+    if (!entries.length) {
+      list.innerHTML = '<p style="padding:20px;text-align:center;color:#999">見つかりませんでした</p>';
+      return;
+    }
+
+    entries.forEach(e => {
+      const entryEl = document.createElement('div');
+      entryEl.className = 'dict-entry';
+      entryEl.innerHTML = `
+        <div class="entry-word">${escapeHtml(e.word)}</div>
+        <span class="entry-category">${escapeHtml(e.category)}</span>
+        <div class="entry-row">
+          <span class="entry-label">字　義</span>
+          <span class="entry-value">${escapeHtml(e.literal || '—')}</span>
+        </div>
+        <div class="entry-row">
+          <span class="entry-label">霊的内意</span>
+          <span class="entry-value">${escapeHtml(e.spiritual)}</span>
+        </div>
+        <div class="entry-shift">💡 ${escapeHtml(e.value_shift)}</div>
+        <div class="entry-ref">📚 ${escapeHtml(e.reference)}</div>
+      `;
+      entryEl.addEventListener('click', () => askAbout(e.word));
+      list.appendChild(entryEl);
+    });
+  }
+
+  // 辞典エントリをタップしてチャットで詳しく聞く
+  function askAbout(word) {
+    switchTab('chat');
+    const input = document.getElementById('user-input');
+    input.value = `「${word}」の相応についてもっと詳しく教えてください`;
+    input.focus();
+  }
+</script>
+</body>
+</html>

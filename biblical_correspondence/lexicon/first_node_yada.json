@@ -1,0 +1,59 @@
+{
+  "node_id": "H3045",
+  "word": "yada",
+  "lemma": "יָדַע",
+  "translit": "yāḏaʿ",
+  "pos": "verb",
+  "definition_en": "to know; to perceive, discern; to experience by encounter",
+  "strongs_ref": "H3045",
+
+  "correspondence": {
+    "literal": "知る・認識する・感知する",
+    "spiritual": "内的体験による真理の認識・霊的な相互知・存在の深みでの交わり",
+    "value_shift": "「知る」は情報の取得ではなく、体感的・経験的な内的通過によってのみ開かれる理解。耳で聞くことによる知識（H1847 da'ath）とは区別される。",
+    "swedenborg_ref": "AC 3869, 4967 — yada の内意: 善と真理の相互知・天的な結合"
+  },
+
+  "verified_verses": [
+    {
+      "ref": "Gen.4.1",
+      "note": "アダムが エバを yada した（H3045）直後、エバが産んだ子を qanah（H7069, 得た・創造した）と呼ぶ。人類史の最初の親子誕生の瞬間に『知る』と『得る』が本文上で隣接する。連想では絶対に見つからない本文照合の発見。",
+      "adjacent_strongs": ["H3045", "H7069"],
+      "contains_H3045": true
+    },
+    {
+      "ref": "Gen.3.5",
+      "note": "『あなたがたは善悪を知るようになる（yada）』——蛇の誘惑のクライマックスに yada がある。",
+      "contains_H3045": true
+    },
+    {
+      "ref": "Gen.32.29",
+      "note": "ヤコブ改名の節。yada は本文に存在しない。改名を『yada の相応』と語ることは本文的根拠がない。",
+      "contains_H3045": false
+    }
+  ],
+
+  "contrast_nodes": [
+    {
+      "strongs": "H1847",
+      "word": "da'ath",
+      "lemma": "דַּעַת",
+      "relation": "同語根の名詞形（yadaʿ の語根から）",
+      "note": "Hos 4:1 の中心語はH3045ではなくH1847。別セッションのClaudeが記憶でH3045と帰属したが、本文照合によりH1847と判明。ホセアの嘆きは yada（動詞的通過知）も da'ath（名詞的蓄積知）も両方欠如している二重構造。第一作業原理がClaude自身の出力に対してガードをかけた最初の事例。",
+      "contains_in_Hos_4_1": false
+    }
+  ],
+
+  "greek_parallel": {
+    "strongs": "G1097",
+    "word": "ginōskō",
+    "lemma": "γινώσκω",
+    "translit": "ginṓskō",
+    "note": "John 17:3 — 永遠の命はあなた（神）とイエスを ginōskō すること。yada と同様に経験的・関係的な知を指す。ギリシャ語では epistēmē（命題的知識）と対比される。"
+  },
+
+  "first_principle": "本文に現れていない語について『この箇所の yada は...』のような語り方をしてはならない。原語については本文照合レイヤーの検証済み情報のみに基づくこと。",
+
+  "built_by": "biblical_lexicon 原語照合レイヤー v1.0",
+  "verification_status": "本文照合済み（morphhb / OSIS XML）"
+}
