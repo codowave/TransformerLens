@@ -193,17 +193,26 @@ def build_lexicon_context(text: str) -> str:
 
     lines = ["【verified_lexicon_context — 本文照合済み原語データ】"]
 
-    # verse × strongs cross-verification
+    # verse × strongs cross-verification (three-state)
     for ref in refs:
         for sid in strongs_ids:
             try:
                 r = verify_verse(ref, sid)
-                status = "存在 ✓" if r["contains"] else "不在 ✗"
-                lines.append(f"  {ref} / {sid}: {status}  (出現数={r['occurrences']})")
-                for w in r.get("words", []):
+                lex_status = r.get("status", "unavailable")
+                if lex_status == "unavailable":
+                    # Data not loaded — must NOT assert absence
                     lines.append(
-                        f"    surface={w['surface']}  translit={w['translit']}  morph={w['morph']}"
+                        f"  {ref} / {sid}: 照合不能（形態論データ未配置）"
+                        f"  reason={r.get('reason', 'unknown')}"
                     )
+                elif lex_status == "found":
+                    lines.append(f"  {ref} / {sid}: 存在 ✓  (出現数={r['occurrences']})")
+                    for w in r.get("words", []):
+                        lines.append(
+                            f"    surface={w['surface']}  translit={w['translit']}  morph={w['morph']}"
+                        )
+                else:  # not_found — confirmed absence (morphhb was available)
+                    lines.append(f"  {ref} / {sid}: 不在 ✗  (出現数=0, 照合済み)")
             except Exception as exc:
                 log.debug("verify_verse(%s, %s) skipped: %s", ref, sid, exc)
 
@@ -214,6 +223,8 @@ def build_lexicon_context(text: str) -> str:
                 verse = lookup_verse(ref)
                 flat = [s for w in verse.words for s in w.strongs]
                 lines.append(f"  {ref} ({verse.language}) Strong's sequence: {flat}")
+            except FileNotFoundError:
+                lines.append(f"  {ref}: 照合不能（形態論データ未配置）")
             except Exception as exc:
                 log.debug("lookup_verse(%s) skipped: %s", ref, exc)
 
