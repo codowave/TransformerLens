@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from lexicon.lexicon_router import router as lexicon_router
 from lexicon.biblical_lexicon import verify_verse, lookup_verse, lookup_word
+from correspondence.correspondence_lookup import build_correspondence_context
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +65,17 @@ SYSTEM_PROMPT = f"""あなたはエマニュエル・スウェーデンボルグ
 ユーザーメッセージに verified_lexicon_context が含まれている場合、それを原語・Strong's・節内出現に関する一次根拠として扱うこと。
 照合済みコンテキストに存在しないヘブライ語・ギリシャ語を、その節に出現すると断定してはならない。
 存在しない場合は「照合上、その語は当該節に確認できない」と明示し、内意・相応の考察と原語事実を必ず分離すること。
+
+【内意照合に関する厳守事項】
+ユーザーメッセージに verified_correspondence_context が含まれている場合、照合状態を必ず確認してから応答すること。
+
+照合状態の三値を厳密に区別する:
+  found       : インデックスに記述が存在する → その内容を根拠として引用してよい
+  not_found   : 索引範囲内だが対応記述なし → 「索引済み範囲に直接記述なし」と明示してから考察する
+  unavailable : 索引未整備 → 「この節の索引は未整備」と明示し、記憶による相応断定をしてはならない
+
+「索引に見つからない」と「スウェーデンボルグが言及していない」は異なる。
+状態が unavailable または not_found のとき、「スウェーデンボルグはこの節について述べていない」と断定してはならない。
 """
 
 # ---------------------------------------------------------------------------
@@ -151,12 +163,20 @@ async def stream_response(request: ChatRequest):
     """Claude API からストリーミングレスポンスを生成"""
     messages = request.history.copy()
 
+    refs = _extract_refs(request.message)
+
     lexicon_ctx = build_lexicon_context(request.message)
+    correspondence_ctx = "\n\n".join(
+        ctx for ref in refs
+        if (ctx := build_correspondence_context(ref))
+    )
+
+    injected_parts = [request.message]
     if lexicon_ctx:
-        user_content = f"{request.message}\n\n{lexicon_ctx}"
-    else:
-        user_content = request.message
-    messages.append({"role": "user", "content": user_content})
+        injected_parts.append(lexicon_ctx)
+    if correspondence_ctx:
+        injected_parts.append(correspondence_ctx)
+    messages.append({"role": "user", "content": "\n\n".join(injected_parts)})
 
     async with client_ai.messages.stream(
         model="claude-opus-4-6",
