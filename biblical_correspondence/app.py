@@ -85,6 +85,77 @@ _OSIS_RE    = re.compile(r'\b([1-3]?[A-Z][a-z]+(?:[A-Z][a-z]+)?)\.(\d+)\.(\d+)\b
 _BIBLE_RE   = re.compile(r'\b([1-3]?[A-Z][a-z]+(?:[A-Z][a-z]+)?)\s+(\d+):(\d+)\b')
 _STRONGS_RE = re.compile(r'\b([HG]\d+[a-z]?)\b', re.IGNORECASE)
 
+# Japanese book name → OSIS ID mapping
+# Keys sorted longest-first at build time so that longer names match before
+# shorter prefix-matches (e.g. 「ヨハネによる福音書」 before 「ヨハネ」).
+_JPN_BOOK_MAP: dict[str, str] = {
+    # OT
+    "創世記": "Gen", "出エジプト記": "Exod", "出エジプト": "Exod",
+    "レビ記": "Lev", "民数記": "Num", "申命記": "Deut",
+    "ヨシュア記": "Josh", "ヨシュア": "Josh",
+    "士師記": "Judg", "ルツ記": "Ruth",
+    "サムエル記上": "1Sam", "サムエル記下": "2Sam",
+    "列王記上": "1Kgs", "列王記下": "2Kgs",
+    "歴代誌上": "1Chr", "歴代誌下": "2Chr",
+    "エズラ記": "Ezra", "ネヘミヤ記": "Neh", "エステル記": "Esth",
+    "ヨブ記": "Job",
+    "詩篇": "Ps", "詩編": "Ps",
+    "箴言": "Prov",
+    "コヘレトの言葉": "Eccl", "伝道の書": "Eccl",
+    "雅歌": "Song",
+    "イザヤ書": "Isa", "エレミヤ書": "Jer", "哀歌": "Lam",
+    "エゼキエル書": "Ezek", "ダニエル書": "Dan",
+    "ホセア書": "Hos", "ヨエル書": "Joel", "アモス書": "Amos",
+    "オバデヤ書": "Obad", "ヨナ書": "Jonah", "ミカ書": "Mic",
+    "ナホム書": "Nah", "ハバクク書": "Hab", "ゼファニヤ書": "Zeph",
+    "ハガイ書": "Hag", "ゼカリヤ書": "Zech", "マラキ書": "Mal",
+    # NT — long forms first
+    "マタイによる福音書": "Matt", "マルコによる福音書": "Mark",
+    "ルカによる福音書": "Luke", "ヨハネによる福音書": "John",
+    "使徒行伝": "Acts", "使徒の働き": "Acts",
+    "ローマ人への手紙": "Rom", "ローマ": "Rom",
+    "コリント人への第一の手紙": "1Cor", "コリント人への第二の手紙": "2Cor",
+    "1コリント": "1Cor", "2コリント": "2Cor",
+    "ガラテヤ人への手紙": "Gal", "ガラテヤ": "Gal",
+    "エフェソ人への手紙": "Eph", "エペソ人への手紙": "Eph",
+    "エフェソ": "Eph", "エペソ": "Eph",
+    "フィリピ人への手紙": "Phil", "ピリピ人への手紙": "Phil",
+    "フィリピ": "Phil", "ピリピ": "Phil",
+    "コロサイ人への手紙": "Col", "コロサイ": "Col",
+    "テサロニケ人への第一の手紙": "1Thess", "テサロニケ人への第二の手紙": "2Thess",
+    "1テサロニケ": "1Thess", "2テサロニケ": "2Thess",
+    "テモテへの第一の手紙": "1Tim", "テモテへの第二の手紙": "2Tim",
+    "1テモテ": "1Tim", "2テモテ": "2Tim",
+    "テトスへの手紙": "Titus", "テトス": "Titus",
+    "フィレモンへの手紙": "Phlm", "ピレモンへの手紙": "Phlm",
+    "ヘブライ人への手紙": "Heb", "ヘブル人への手紙": "Heb", "ヘブル": "Heb",
+    "ヤコブの手紙": "Jas", "ヤコブ": "Jas",
+    "ペトロの第一の手紙": "1Pet", "ペトロの第二の手紙": "2Pet",
+    "ペテロの第一の手紙": "1Pet", "ペテロの第二の手紙": "2Pet",
+    "1ペトロ": "1Pet", "2ペトロ": "2Pet",
+    "1ペテロ": "1Pet", "2ペテロ": "2Pet",
+    "ヨハネの第一の手紙": "1John", "ヨハネの第二の手紙": "2John",
+    "ヨハネの第三の手紙": "3John",
+    "1ヨハネ": "1John", "2ヨハネ": "2John", "3ヨハネ": "3John",
+    "ユダの手紙": "Jude", "ユダ": "Jude",
+    "ヨハネの黙示録": "Rev", "黙示録": "Rev",
+    # Short forms (must come after their long-form variants)
+    "マタイ": "Matt", "マルコ": "Mark", "ルカ": "Luke", "ヨハネ": "John",
+    "ホセア": "Hos", "ヨエル": "Joel", "アモス": "Amos",
+    "ミカ": "Mic", "ナホム": "Nah", "ハバクク": "Hab",
+    "ハガイ": "Hag", "イザヤ": "Isa", "エレミヤ": "Jer",
+    "エゼキエル": "Ezek", "ダニエル": "Dan",
+}
+
+# Build regex: longest names first to prevent prefix shadowing
+_jpn_names_sorted = sorted(_JPN_BOOK_MAP.keys(), key=len, reverse=True)
+_jpn_pattern = "(?:" + "|".join(re.escape(n) for n in _jpn_names_sorted) + ")"
+# Matches: <book> [space] <chapter> : <verse>
+#       or: <book> [space] <chapter> 章 [space] <verse> 節
+_JPN_RE = re.compile(
+    _jpn_pattern + r'\s*(\d+)(?::(\d+)|章\s*(\d+)節?)'
+)
+
 
 def _extract_refs(text: str) -> list[str]:
     refs: set[str] = set()
@@ -92,6 +163,17 @@ def _extract_refs(text: str) -> list[str]:
         refs.add(m.group(0))
     for m in _BIBLE_RE.finditer(text):
         refs.add(f"{m.group(1)}.{m.group(2)}.{m.group(3)}")
+    for m in _JPN_RE.finditer(text):
+        book_jpn = m.group(0)
+        # Extract the matched book name by stripping trailing digits/spaces
+        for name in _jpn_names_sorted:
+            if book_jpn.startswith(name):
+                osis_book = _JPN_BOOK_MAP[name]
+                chap = m.group(1)
+                verse = m.group(2) or m.group(3)  # colon-form or 章節-form
+                if verse:
+                    refs.add(f"{osis_book}.{chap}.{verse}")
+                break
     return list(refs)
 
 
