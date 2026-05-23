@@ -50,12 +50,17 @@ async def get_health():
     # correspondence_index のエントリ数
     corr_index_path = Path(__file__).parent.parent / "correspondence" / "correspondence_index.json"
     corr_entry_count = 0
+    corr_index_error: str | None = None
     if corr_index_path.exists():
         try:
             with open(corr_index_path, encoding="utf-8") as f:
                 corr_entry_count = len(json.load(f).get("entries", []))
-        except Exception:
-            pass
+        except json.JSONDecodeError as exc:
+            corr_index_error = f"JSON parse error: {exc}"
+            log.error("correspondence_index.json parse failed: %s", exc)
+        except OSError as exc:
+            corr_index_error = f"file read error: {exc}"
+            log.error("correspondence_index.json read failed: %s", exc)
 
     # verify_verse サニティチェック（データがある場合のみ意味を持つ）
     verify_status = "degraded"
@@ -82,6 +87,7 @@ async def get_health():
         },
         "correspondence_index": {
             "entry_count": corr_entry_count,
+            **({"error": corr_index_error} if corr_index_error else {}),
         },
         "verify_verse_status": verify_status,
         "verify_verse_detail": verify_detail,
