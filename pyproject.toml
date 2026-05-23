@@ -3,7 +3,7 @@
     description="An implementation of transformers tailored for mechanistic interpretability."
     license="MIT"
     name="transformer-lens"
-    packages=[{include="transformer_lens"}]
+    packages=[{include="transformer_lens"}, {include="research_os"}]
     readme="README.md"
     # Version is automatically set by the pipeline on release
     version="0.0.0"
@@ -11,6 +11,7 @@
     [tool.poetry.scripts]
         build-docs="docs.make_docs:build_docs"
         docs-hot-reload="docs.make_docs:docs_hot_reload"
+        research-os="research_os.cli:main"
 
     [tool.poetry.dependencies]
         accelerate=">=0.23.0" # Needed for Llama Models
