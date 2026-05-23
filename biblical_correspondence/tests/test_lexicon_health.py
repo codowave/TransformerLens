@@ -20,9 +20,12 @@ _BC_DIR = Path(__file__).parent.parent
 if str(_BC_DIR) not in sys.path:
     sys.path.insert(0, str(_BC_DIR))
 
-# morphhb / morphgnt が存在しない状態に設定（CI でも確実に unavailable になる）
-os.environ.setdefault("MORPHHB_PATH", str(_BC_DIR / "data" / "__nonexistent_morphhb__"))
-os.environ.setdefault("MORPHGNT_PATH", str(_BC_DIR / "data" / "__nonexistent_morphgnt__"))
+# morphhb / morphgnt が存在しない状態に強制設定。
+# setdefault ではなく強制代入する — 実環境に morphhb が配置済みでも
+# このテストファイルは「unavailable パス」を固定するため外部環境から独立させる。
+# 回帰防止テストが環境変数次第で挙動を変えると、Codex P1 の再発を検出できない。
+os.environ["MORPHHB_PATH"] = str(_BC_DIR / "data" / "__nonexistent_morphhb__")
+os.environ["MORPHGNT_PATH"] = str(_BC_DIR / "data" / "__nonexistent_morphgnt__")
 
 from lexicon.biblical_lexicon import verify_verse, lookup_word  # noqa: E402
 from correspondence.correspondence_lookup import lookup_correspondence  # noqa: E402
@@ -159,7 +162,9 @@ class TestHealthEndpoint:
 
         # ANTHROPIC_API_KEY がないと app.py がモジュールレベルで RuntimeError を上げる。
         # テスト用にダミーキーを設定（実際の API は呼ばれない）。
-        os.environ.setdefault("ANTHROPIC_API_KEY", "sk-test-dummy-key-for-health-check")
+        # setdefault ではなく強制代入 — 環境変数が設定済みの場合でも
+        # モジュール再インポート前に確定させる必要があるため。
+        os.environ["ANTHROPIC_API_KEY"] = os.environ.get("ANTHROPIC_API_KEY") or "sk-test-dummy-key-for-health-check"
 
         if "app" in _sys.modules:
             del _sys.modules["app"]
