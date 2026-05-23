@@ -183,6 +183,44 @@ Q（Query）、K（Key）、V（Value）、softmax正規化、出力集約の5�
 """
 
 
+def _collect_failure_points(result: dict, axes: dict) -> list[str]:
+    """構造的な失敗点を具体的に列挙する。"""
+    points = []
+    reduction = axes.get("reduction_risk", {})
+    directionality = axes.get("directionality", {})
+    hierarchy = axes.get("hierarchy", {})
+
+    if reduction.get("verdict") == "reductive":
+        points.append(
+            f"reduction: Correspondence → 計算的重み付けへの還元 "
+            f"[{reduction.get('explanation', '')}]"
+        )
+    if directionality.get("verdict") == "structural_difference":
+        points.append(
+            f"directionality: all-to-all (Attention) ≠ higher→lower asymmetric (Correspondence) "
+            f"[{directionality.get('explanation', '')}]"
+        )
+    if hierarchy.get("verdict") == "structural_difference":
+        points.append(
+            f"hierarchy: parallel heads within layer ≠ vertical ontological levels "
+            f"[{hierarchy.get('explanation', '')}]"
+        )
+
+    # component_mappings の counter_evidence からも収集
+    for m in result.get("component_mappings", []):
+        ce = m.get("counter_evidence", "")
+        if ce and m.get("confidence") == "low":
+            points.append(
+                f"component/{m.get('attention_component', '?')}: {ce}"
+            )
+
+    key_asym = result.get("key_asymmetry", "")
+    if key_asym:
+        points.append(f"key_asymmetry: {key_asym}")
+
+    return points
+
+
 def _interpret_mechanism_result(result: dict) -> dict:
     """
     判定柵: 類比が残るかではなく、類比が何を壊さないかを見る。
@@ -200,26 +238,29 @@ def _interpret_mechanism_result(result: dict) -> dict:
     hierarchy = axes.get("hierarchy", {})
     overall = result.get("overall_verdict", "unknown")
     upgrade_condition = result.get("candidate_upgrade_condition", "未定義")
+    failure_points = _collect_failure_points(result, axes)
 
-    # --- 判定ロジック ---
+    _base = {
+        "candidate_upgrade_condition": upgrade_condition,
+        "failure_points": failure_points,
+        "reduction_risk_verdict": reduction.get("verdict", "unknown"),
+        "ruling_principle": "類比が残るかではなく、類比が何を壊さないかを見る。",
+    }
 
     # 最優先: reduction_risk が reductive なら partial_analogy でも昇格不可
     if reduction.get("verdict") == "reductive":
-        decision = "no_upgrade"
-        reason = (
-            "reduction_risk: reductive — "
-            "Correspondence が計算的重み付けに還元されており、概念的格下げが発生している。"
-            "overall_verdict が partial_analogy 以上でも昇格不可。"
-        )
         return {
-            "decision": decision,
+            "decision": "no_upgrade",
             "blocking_axis": "reduction_risk",
-            "reason": reason,
-            "upgrade_condition": upgrade_condition,
-            "ruling_principle": "類比が残るかではなく、類比が何を壊さないかを見る。",
+            "reason": (
+                "reduction_risk: reductive — "
+                "Correspondence が計算的重み付けに還元されており概念的格下げが発生。"
+                "overall_verdict が partial_analogy 以上でも昇格不可。"
+            ),
+            **_base,
         }
 
-    # directionality が structural_difference かつ high risk → 強い減点
+    # directionality/hierarchy の blocking 判定
     dir_blocks = (
         directionality.get("verdict") == "structural_difference"
         and directionality.get("risk") == "high"
@@ -229,59 +270,37 @@ def _interpret_mechanism_result(result: dict) -> dict:
         and hierarchy.get("risk") == "high"
     )
 
-    # weak_analogy + 差異明示 + metaphorical に留まる → candidate 維持可
+    # weak_analogy + metaphorical + 差異明示 → candidate 維持
     if overall == "weak_analogy" and reduction.get("verdict") == "metaphorical":
-        if dir_blocks or hier_blocks:
-            blocking = []
-            if dir_blocks:
-                blocking.append("directionality")
-            if hier_blocks:
-                blocking.append("hierarchy")
-            decision = "candidate_maintained"
-            reason = (
-                f"weak_analogy + reduction_risk: metaphorical。"
-                f"差異が明示されている（{', '.join(blocking)}）。"
-                "Correspondence の格下げがないため candidate 維持は可能。"
-            )
-        else:
-            decision = "candidate_maintained"
-            reason = (
-                "weak_analogy + reduction_risk: metaphorical。"
-                "主要な構造差異が明示されており、概念の格下げなし。"
-            )
+        blocking_names = [a for a, b in
+                          [("directionality", dir_blocks), ("hierarchy", hier_blocks)] if b]
+        diff_note = f"差異明示済み（{', '.join(blocking_names)}）。" if blocking_names else "主要差異明示済み。"
         return {
-            "decision": decision,
-            "blocking_axis": None,
-            "reason": reason,
-            "upgrade_condition": upgrade_condition,
-            "ruling_principle": "類比が残るかではなく、類比が何を壊さないかを見る。",
+            "decision": "candidate_maintained",
+            "blocking_axis": blocking_names or None,
+            "reason": f"weak_analogy + reduction_risk: metaphorical。{diff_note}概念の格下げなし。",
+            **_base,
         }
 
-    # partial_analogy / strong_analogy + 差異2軸ともblocking → 条件付き候補
+    # partial_analogy / strong_analogy
     if overall in ("partial_analogy", "strong_analogy"):
-        if dir_blocks and hier_blocks:
-            decision = "conditional_candidate"
-            reason = (
-                f"{overall} だが directionality・hierarchy いずれも structural_difference/high。"
-                "revised mapping が両差異を明示したうえで耐えた場合のみ昇格可。"
-            )
-        elif dir_blocks or hier_blocks:
-            blocking = "directionality" if dir_blocks else "hierarchy"
-            decision = "conditional_candidate"
-            reason = (
-                f"{overall} だが {blocking} が structural_difference/high。"
-                "revised mapping でこの差異を組み込んだ場合のみ昇格可。"
-            )
-        else:
-            decision = "upgrade_eligible"
-            reason = f"{overall} かつ主要差異軸に blocking なし。candidate 昇格を検討可。"
+        blocking_names = [a for a, b in
+                          [("directionality", dir_blocks), ("hierarchy", hier_blocks)] if b]
+        if blocking_names:
+            return {
+                "decision": "conditional_candidate",
+                "blocking_axis": blocking_names,
+                "reason": (
+                    f"{overall} だが {' / '.join(blocking_names)} が structural_difference/high。"
+                    "revised mapping が差異を明示したうえで耐えた場合のみ昇格可。"
+                ),
+                **_base,
+            }
         return {
-            "decision": decision,
-            "blocking_axis": [a for a, b in
-                              [("directionality", dir_blocks), ("hierarchy", hier_blocks)] if b] or None,
-            "reason": reason,
-            "upgrade_condition": upgrade_condition,
-            "ruling_principle": "類比が残るかではなく、類比が何を壊さないかを見る。",
+            "decision": "upgrade_eligible",
+            "blocking_axis": None,
+            "reason": f"{overall} かつ主要差異軸に blocking なし。candidate 昇格を検討可。",
+            **_base,
         }
 
     # no_mapping
@@ -289,8 +308,7 @@ def _interpret_mechanism_result(result: dict) -> dict:
         "decision": "no_upgrade",
         "blocking_axis": "overall_verdict",
         "reason": f"overall_verdict: {overall} — 有意な構造的類比なし。",
-        "upgrade_condition": upgrade_condition,
-        "ruling_principle": "類比が残るかではなく、類比が何を壊さないかを見る。",
+        **_base,
     }
 
 
@@ -334,7 +352,27 @@ def _run_mechanism_mapping(dry_run: bool) -> dict:
         "status": status,
         **result,
         "adoption_ruling": adoption,
+        "_summary": _format_ruling_summary(adoption),
     }
+
+
+def _format_ruling_summary(adoption: dict) -> str:
+    """読解順序に従った判定サマリーを先頭に表示する文字列。"""
+    sep = "=" * 60
+    lines = [
+        sep,
+        "  MECHANISM MAPPING — 判定サマリー",
+        sep,
+        f"  adoption_ruling.decision      : {adoption.get('decision', '?')}",
+        f"  candidate_upgrade_condition   : {adoption.get('candidate_upgrade_condition', '?')}",
+    ]
+    fps = adoption.get("failure_points", [])
+    lines.append(f"  failure_points                : {len(fps)} 件")
+    for fp in fps:
+        lines.append(f"    - {fp}")
+    lines.append(f"  reduction_risk.verdict        : {adoption.get('reduction_risk_verdict', '?')}")
+    lines.append(sep)
+    return "\n".join(lines)
 
 
 def _format_yaml(data: dict, indent: int = 0) -> str:
@@ -473,7 +511,7 @@ def verify_hypothesis(
 
     if dry_run:
         result["dry_run"] = True
-        print(_format_yaml(result))
+        _print_result(result, task)
         return
 
     # 保存先が指定されている場合は observation Markdown として書き出す
@@ -484,4 +522,14 @@ def verify_hypothesis(
         print(f"観察記録を保存: {out}")
         print(f"adoption_status: not_adopted")
     else:
-        print(_format_yaml(result))
+        _print_result(result, task)
+
+
+def _print_result(result: dict, task: TaskType) -> None:
+    """mechanism_mapping はサマリーを先頭に、その後フル出力。"""
+    if task == "mechanism_mapping":
+        summary = result.pop("_summary", None)
+        if summary:
+            print(summary)
+            print()
+    print(_format_yaml(result))
