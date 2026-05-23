@@ -127,7 +127,35 @@ def _evaluate_failure_points(claims: dict) -> list[FailurePoint]:
     """仮説ファイルの candidate_failure_points を静的に評価する。"""
     raw_fps = claims.get("candidate_failure_points", [])
 
-    # 既知の構造的判定を適用
+    # 既知の構造的判定を適用。
+    # fp-3 は仮説文書に mitigation_status: rejected + revised_mapping が
+    # 記述された場合のみ mitigated に変化する。
+    # revised_mapping が存在しない場合は confirmed のまま。
+    fp3_raw = next((f for f in raw_fps if f.get("id") == "fp-3"), {})
+    fp3_mitigation_rejected = fp3_raw.get("mitigation_status") == "rejected"
+    fp3_has_revised_mapping  = "revised_mapping" in fp3_raw
+
+    if fp3_mitigation_rejected and fp3_has_revised_mapping:
+        # 初期写像（head = 対応層）は拒否され、revised_mapping が明記された
+        # → head 単位写像の問題は解消。ただし revised_mapping が
+        #   mechanism_mapping を通過するまでは promotion しない。
+        fp3_verdict = "mitigated"
+        fp3_detail  = (
+            "初期写像「head = 対応階層」を拒否。revised_mapping を採用:\n"
+            "  - Q/K/V = ローカルな選択・重み付け機構（head 単位 ≠ 対応層）\n"
+            "  - multi-head 全体 = 多視点からの選択機構（階層写像ではない）\n"
+            "  - 対応三層（天界/霊的/自然）は attention head に還元されない。\n"
+            "この revised_mapping 自体が mechanism_mapping の次の検証対象になる。"
+        )
+    else:
+        fp3_verdict = "confirmed"
+        fp3_detail  = (
+            "multi-head が同一層を並列分割する点は、対応の統一的三層構造と"
+            "構造的に非互換。各 head が異なる対応次元を担うという解釈は"
+            "仮説の範囲を大幅に変更する（元の主張を弱める）。"
+            "revised_mapping を仮説文書に明記してから再実行すること。"
+        )
+
     verdicts: dict[str, tuple[Literal["confirmed", "mitigated", "open"], str]] = {
         "fp-1": (
             "mitigated",
@@ -139,12 +167,7 @@ def _evaluate_failure_points(claims: dict) -> list[FailurePoint]:
             "softmax の確率分布化に対する対応論的アナロジーは未確立。"
             "「受容度」解釈は可能だが、確率の正規化は対応に対応物を持たない。",
         ),
-        "fp-3": (
-            "confirmed",
-            "multi-head が同一層を並列分割する点は、対応の統一的三層構造と"
-            "構造的に非互換。各 head が異なる対応次元を担うという解釈は"
-            "仮説の範囲を大幅に変更する（元の主張を弱める）。",
-        ),
+        "fp-3": (fp3_verdict, fp3_detail),
         "fp-4": (
             "mitigated",
             "対応論では自然層は内意の外化・現れであり、出力が自然層を通じて"
@@ -173,41 +196,63 @@ def _make_promotion_decision(
     symmetry_result: str,
     failure_points: list[FailurePoint],
     current_stage: str,
+    hypothesis: dict,
 ) -> dict:
     high_confirmed = [
         fp for fp in failure_points
         if fp.severity == "high" and fp.verdict == "confirmed"
     ]
-    high_open = [
+    medium_open = [
         fp for fp in failure_points
-        if fp.severity == "high" and fp.verdict == "open"
+        if fp.severity == "medium" and fp.verdict == "open"
     ]
+
+    # fp-3 が mitigated になったが revised_mapping 自体はまだ未検証。
+    # revised_mapping の存在を確認し、それが次の検証対象であることを明示する。
+    fp3_raw = next(
+        (f for f in hypothesis.get("candidate_failure_points", []) if f.get("id") == "fp-3"),
+        {}
+    )
+    fp3_revised_mapping_present = "revised_mapping" in fp3_raw
 
     if len(high_confirmed) >= 2:
         target = PromotionTarget.REJECT
         rationale = (
             f"高重篤度の confirmed failure point が {len(high_confirmed)} 件。"
-            "仮説の中核的主張が構造的に成立しない。exploration に差し戻す。"
+            "仮説の中核的主張が構造的に成立しない。"
         )
     elif len(high_confirmed) == 1:
-        # fp-3（multi-head）が confirmed だが、仮説の修正で回避可能
         target = PromotionTarget.STAY_EXPLORATION
         rationale = (
             f"高重篤度 confirmed: {high_confirmed[0].id} ({high_confirmed[0].description})。"
-            "仮説をこのまま candidate に昇格させると、"
-            "textual_comparison で破綻した fp-3 を見逃す危険がある。"
-            "fp-3 の mitigation path（head ≠ 同一層の並列分割、という再定義）を"
+            "fp-3 の mitigation path（revised_mapping）を"
             "仮説文書に明記してから再度 mechanism_mapping を実行すること。"
         )
     elif symmetry_result == SymmetryResult.INCOMPATIBLE.value:
         target = PromotionTarget.STAY_EXPLORATION
         rationale = "対称性が incompatible。方向性の再定義が必要。"
-    else:
+    elif fp3_revised_mapping_present:
+        # fp-3 mitigated、revised_mapping 記述済み、他に confirmed high なし。
+        # ただし revised_mapping そのものの mechanism_mapping 通過が未確認。
+        # fp-2 (open medium) も残存。→ candidate だが条件付き。
         target = PromotionTarget.CANDIDATE
+        open_ids = [fp.id for fp in failure_points if fp.verdict == "open"]
         rationale = (
-            "directionality compatible, symmetry partial（致命的ではない）。"
-            "confirmed high fp は fp-3 のみ（mitigation path あり）。"
-            "修正後に candidate 昇格可能。"
+            "高重篤度 confirmed fp なし。"
+            "fp-3 revised_mapping 記述済み（head 単位写像を廃棄、Q/K/V を集合として読む）。\n"
+            "candidate 昇格条件:\n"
+            "  ✓ directionality compatible\n"
+            "  ✓ symmetry partial（致命的でない）\n"
+            "  ✓ fp-3 revised_mapping 明記済み\n"
+            f"  △ open fp: {open_ids}（fp-2 softmax アナロジー未確立、次検証で確認）\n"
+            "次ステップ: textual_comparison（反証検索として実行）"
+        )
+    else:
+        target = PromotionTarget.STAY_EXPLORATION
+        rationale = (
+            "directionality compatible, symmetry partial。"
+            "fp-3 の revised_mapping が仮説文書に未記述。"
+            "記述後に再実行すること。"
         )
 
     return {
@@ -269,6 +314,7 @@ def run(hypothesis: dict, dry_run: bool = True) -> MechanismMappingResult:
                     sym_result["result"],
                     fps,
                     current_stage,
+                    hypothesis,
                   )
 
     return MechanismMappingResult(
