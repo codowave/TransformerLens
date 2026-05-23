@@ -30,12 +30,23 @@ def main() -> None:
                    help="実行する検証タスク")
     v.add_argument("--dry-run", action="store_true",
                    help="計算を伴う処理をスキップし、静的構造判定のみ実行する")
+    v.add_argument("--mode", default="falsification",
+                   choices=["falsification", "support"],
+                   help="textual_comparison のスキャンモード（default: falsification）")
+    v.add_argument("--focus", default=None,
+                   help="textual_comparison でフォーカスする failure point ID（例: fp-2）")
 
     args = parser.parse_args()
 
     if args.command == "verify":
         from research_os.verify import run_verify
-        run_verify(args.hypothesis, task=args.task, dry_run=args.dry_run)
+        run_verify(
+            args.hypothesis,
+            task=args.task,
+            dry_run=args.dry_run,
+            mode=args.mode,
+            focus=args.focus,
+        )
     else:
         parser.print_help()
         sys.exit(1)
