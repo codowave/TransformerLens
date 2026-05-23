@@ -208,18 +208,101 @@ def _format_yaml(data: dict, indent: int = 0) -> str:
 
 
 TaskType = Literal["textual_comparison", "mechanism_mapping"]
+ModeType = Literal["exploration", "falsification"]
+
+_INTERPRETATION_NOTE = {
+    "falsification": (
+        "Correspondence matches are exploratory observations, not confirmation of the hypothesis. "
+        "Some matches (e.g. influx asymmetry) may serve as counter-evidence."
+    ),
+    "exploration": (
+        "Candidate matches extracted for further investigation. No adoption decision made."
+    ),
+}
+
+
+def _build_observation_md(
+    result: dict,
+    hypothesis_id: str,
+    task: TaskType,
+    mode: ModeType,
+) -> str:
+    from datetime import date
+
+    fm_lines = [
+        "---",
+        f"id: obs-001",
+        f"date: {date.today()}",
+        f"source: research_os/verify",
+        f"status: observation",
+        f"source_hypothesis: {hypothesis_id}",
+        f"task: {task}",
+        f"mode: {mode}",
+        f"evidence_level: exploratory",
+        f"adoption_status: not_adopted",
+        f'interpretation_note: "{_INTERPRETATION_NOTE[mode]}"',
+        "---",
+    ]
+
+    body_lines = [
+        f"# 観察: {task} ({mode}モード)",
+        "",
+        f"仮説 `{hypothesis_id}` に対して `{task}` を `{mode}` モードで実行した結果。",
+        "採択はしない。観察記録として保存する。",
+        "",
+        "## 結果",
+        "",
+    ]
+
+    matches = result.get("matches", [])
+    if matches:
+        body_lines.append(f"候補マッチ数: {len(matches)}")
+        body_lines.append("")
+        for m in matches:
+            conf = m.get("confidence", "?")
+            conf_mark = {"high": "★★★", "medium": "★★☆", "low": "★☆☆"}.get(conf, conf)
+            body_lines += [
+                f"### {conf_mark} {m.get('swedenborg_term')} ← {m.get('attention_concept')}",
+                f"- spiritual: {m.get('spiritual')}",
+                f"- reason: {m.get('reason')}",
+                f"- ref: {m.get('reference')}",
+                "",
+            ]
+
+    body_lines += [
+        "## 解釈上の注意",
+        "",
+        _INTERPRETATION_NOTE[mode],
+        "",
+        "### influx系エントリについて",
+        "光・水・風の「高次→低次への伝達」は相応側の方向性の非対称性を示しており、",
+        "双方向的な Attention 機構との差異として反証材料になり得る。",
+    ]
+
+    return "\n".join(fm_lines) + "\n\n" + "\n".join(body_lines)
 
 
 def verify_hypothesis(
     file: Path,
     task: TaskType,
     source: str = "biblical_correspondence",
+    mode: ModeType = "exploration",
     dry_run: bool = False,
     out: Path | None = None,
 ) -> None:
     if not file.exists():
         print(f"エラー: ファイルが見つかりません: {file}", file=sys.stderr)
         sys.exit(1)
+
+    # 仮説IDを front-matter から取得
+    text = file.read_text(encoding="utf-8")
+    hypothesis_id = file.stem  # fallback
+    if text.startswith("---"):
+        end = text.find("---", 3)
+        if end != -1:
+            for line in text[3:end].splitlines():
+                if line.startswith("id:"):
+                    hypothesis_id = line.partition(":")[2].strip()
 
     if task == "textual_comparison":
         result = _run_textual_comparison(dry_run)
@@ -231,11 +314,15 @@ def verify_hypothesis(
 
     if dry_run:
         result["dry_run"] = True
+        print(_format_yaml(result))
+        return
 
-    output = _format_yaml(result)
-
-    if out and not dry_run:
-        out.write_text(output, encoding="utf-8")
-        print(f"検証結果書き込み完了: {out}")
+    # 保存先が指定されている場合は observation Markdown として書き出す
+    if out:
+        obs_md = _build_observation_md(result, hypothesis_id, task, mode)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(obs_md, encoding="utf-8")
+        print(f"観察記録を保存: {out}")
+        print(f"adoption_status: not_adopted")
     else:
-        print(output)
+        print(_format_yaml(result))

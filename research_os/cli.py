@@ -63,10 +63,15 @@ def main() -> None:
                         help="実行する検証タスク")
     p_vfy.add_argument("--source", default="biblical_correspondence",
                         help="照合ソース（デフォルト: biblical_correspondence）")
+    p_vfy.add_argument("--mode", default="exploration",
+                        choices=["exploration", "falsification"],
+                        help="探索モード（デフォルト: exploration）")
     p_vfy.add_argument("--dry-run", action="store_true",
                         help="候補抽出のみ。採択・書き込みなし")
+    p_vfy.add_argument("--output", type=Path, default=None,
+                        help="保存先パス（research/observations/obs-XXX.md 等）")
     p_vfy.add_argument("--out", type=Path, default=None,
-                        help="結果出力先（--dry-run 時は無視）")
+                        help="結果出力先（--dry-run 時は無視）。--output と同義")
 
     args = parser.parse_args()
 
@@ -102,12 +107,14 @@ def main() -> None:
 
     elif args.cmd == "verify":
         from research_os.verifier import verify_hypothesis
+        output = args.output or args.out
         verify_hypothesis(
             args.file,
             task=args.task,
             source=args.source,
+            mode=args.mode,
             dry_run=args.dry_run,
-            out=args.out,
+            out=output,
         )
 
 
