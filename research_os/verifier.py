@@ -183,6 +183,117 @@ Q（Query）、K（Key）、V（Value）、softmax正規化、出力集約の5�
 """
 
 
+def _interpret_mechanism_result(result: dict) -> dict:
+    """
+    判定柵: 類比が残るかではなく、類比が何を壊さないかを見る。
+
+    読解順序:
+      1. reduction_risk.verdict
+      2. directionality.verdict
+      3. hierarchy.verdict
+      4. candidate_upgrade_condition
+      5. overall_verdict
+    """
+    axes = result.get("risk_axes", {})
+    reduction = axes.get("reduction_risk", {})
+    directionality = axes.get("directionality", {})
+    hierarchy = axes.get("hierarchy", {})
+    overall = result.get("overall_verdict", "unknown")
+    upgrade_condition = result.get("candidate_upgrade_condition", "未定義")
+
+    # --- 判定ロジック ---
+
+    # 最優先: reduction_risk が reductive なら partial_analogy でも昇格不可
+    if reduction.get("verdict") == "reductive":
+        decision = "no_upgrade"
+        reason = (
+            "reduction_risk: reductive — "
+            "Correspondence が計算的重み付けに還元されており、概念的格下げが発生している。"
+            "overall_verdict が partial_analogy 以上でも昇格不可。"
+        )
+        return {
+            "decision": decision,
+            "blocking_axis": "reduction_risk",
+            "reason": reason,
+            "upgrade_condition": upgrade_condition,
+            "ruling_principle": "類比が残るかではなく、類比が何を壊さないかを見る。",
+        }
+
+    # directionality が structural_difference かつ high risk → 強い減点
+    dir_blocks = (
+        directionality.get("verdict") == "structural_difference"
+        and directionality.get("risk") == "high"
+    )
+    hier_blocks = (
+        hierarchy.get("verdict") == "structural_difference"
+        and hierarchy.get("risk") == "high"
+    )
+
+    # weak_analogy + 差異明示 + metaphorical に留まる → candidate 維持可
+    if overall == "weak_analogy" and reduction.get("verdict") == "metaphorical":
+        if dir_blocks or hier_blocks:
+            blocking = []
+            if dir_blocks:
+                blocking.append("directionality")
+            if hier_blocks:
+                blocking.append("hierarchy")
+            decision = "candidate_maintained"
+            reason = (
+                f"weak_analogy + reduction_risk: metaphorical。"
+                f"差異が明示されている（{', '.join(blocking)}）。"
+                "Correspondence の格下げがないため candidate 維持は可能。"
+            )
+        else:
+            decision = "candidate_maintained"
+            reason = (
+                "weak_analogy + reduction_risk: metaphorical。"
+                "主要な構造差異が明示されており、概念の格下げなし。"
+            )
+        return {
+            "decision": decision,
+            "blocking_axis": None,
+            "reason": reason,
+            "upgrade_condition": upgrade_condition,
+            "ruling_principle": "類比が残るかではなく、類比が何を壊さないかを見る。",
+        }
+
+    # partial_analogy / strong_analogy + 差異2軸ともblocking → 条件付き候補
+    if overall in ("partial_analogy", "strong_analogy"):
+        if dir_blocks and hier_blocks:
+            decision = "conditional_candidate"
+            reason = (
+                f"{overall} だが directionality・hierarchy いずれも structural_difference/high。"
+                "revised mapping が両差異を明示したうえで耐えた場合のみ昇格可。"
+            )
+        elif dir_blocks or hier_blocks:
+            blocking = "directionality" if dir_blocks else "hierarchy"
+            decision = "conditional_candidate"
+            reason = (
+                f"{overall} だが {blocking} が structural_difference/high。"
+                "revised mapping でこの差異を組み込んだ場合のみ昇格可。"
+            )
+        else:
+            decision = "upgrade_eligible"
+            reason = f"{overall} かつ主要差異軸に blocking なし。candidate 昇格を検討可。"
+        return {
+            "decision": decision,
+            "blocking_axis": [a for a, b in
+                              [("directionality", dir_blocks), ("hierarchy", hier_blocks)] if b] or None,
+            "reason": reason,
+            "upgrade_condition": upgrade_condition,
+            "ruling_principle": "類比が残るかではなく、類比が何を壊さないかを見る。",
+        }
+
+    # no_mapping
+    return {
+        "decision": "no_upgrade",
+        "blocking_axis": "overall_verdict",
+        "reason": f"overall_verdict: {overall} — 有意な構造的類比なし。",
+        "upgrade_condition": upgrade_condition,
+        "ruling_principle": "類比が残るかではなく、類比が何を壊さないかを見る。",
+    }
+
+
 def _run_mechanism_mapping(dry_run: bool) -> dict:
     """Q/K/V/softmax → Swedenborg 構造への写像を3軸で厳格評価（Claude API）。"""
     api_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -215,11 +326,14 @@ def _run_mechanism_mapping(dry_run: bool) -> dict:
         else "candidate_matches_found"
     )
 
+    adoption = _interpret_mechanism_result(result)
+
     return {
         "verification_task": "mechanism_mapping",
         "hypothesis": "hyp-001",
         "status": status,
         **result,
+        "adoption_ruling": adoption,
     }
 
 
