@@ -156,17 +156,46 @@ def _evaluate_failure_points(claims: dict) -> list[FailurePoint]:
             "revised_mapping を仮説文書に明記してから再実行すること。"
         )
 
+    # fp-2: textual_comparison (falsified) + mitigation_status を参照して verdict を決定。
+    # 「attention score = 受容度」という mitigation path が拒否された場合、
+    # fp-2 は medium-confirmed（縮退版 mitigation 採用）。
+    fp2_raw = next((f for f in raw_fps if f.get("id") == "fp-2"), {})
+    fp2_mitigation_rejected = fp2_raw.get("mitigation_status") == "rejected"
+    fp2_has_mitigation_text = "fp2_mitigation_text" in fp2_raw
+    fp2_tc_falsified = (
+        fp2_raw.get("textual_comparison_result", {}).get("verdict") == "falsified"
+    )
+
+    if fp2_mitigation_rejected and fp2_has_mitigation_text:
+        fp2_verdict = "confirmed"
+        fp2_detail = (
+            "「attention score = 受容度」の写像を拒否（DLW.55/56 による）。\n"
+            "縮退版 mitigation 採用:\n"
+            "  - attention 重み付けは「選択的強調の弱いアナロジー」にとどめる\n"
+            "  - 受容そのものへの写像は不可（受容は form による定性的構造）\n"
+            "  - fp-2 は medium-confirmed として未解決制約として残る\n"
+            "  - stage: candidate は維持するが softmax 対応は大幅に削減"
+        )
+    elif fp2_tc_falsified:
+        fp2_verdict = "confirmed"
+        fp2_detail = (
+            "textual_comparison で falsified（DLW.319/55/56, HH.23 等）。\n"
+            "mitigation revision の記述が必要。"
+        )
+    else:
+        fp2_verdict = "open"
+        fp2_detail = (
+            "softmax の確率分布化に対する対応論的アナロジーは未確立。"
+            "textual_comparison 待ち。"
+        )
+
     verdicts: dict[str, tuple[Literal["confirmed", "mitigated", "open"], str]] = {
         "fp-1": (
             "mitigated",
             "causal mask により past-only に制限。ただし同一シーケンス内では"
             "全トークンが対等に attend できるため階層性の主張は弱まる。部分緩和。",
         ),
-        "fp-2": (
-            "open",
-            "softmax の確率分布化に対する対応論的アナロジーは未確立。"
-            "「受容度」解釈は可能だが、確率の正規化は対応に対応物を持たない。",
-        ),
+        "fp-2": (fp2_verdict, fp2_detail),
         "fp-3": (fp3_verdict, fp3_detail),
         "fp-4": (
             "mitigated",
@@ -233,19 +262,27 @@ def _make_promotion_decision(
         rationale = "対称性が incompatible。方向性の再定義が必要。"
     elif fp3_revised_mapping_present:
         # fp-3 mitigated、revised_mapping 記述済み、他に confirmed high なし。
-        # ただし revised_mapping そのものの mechanism_mapping 通過が未確認。
-        # fp-2 (open medium) も残存。→ candidate だが条件付き。
         target = PromotionTarget.CANDIDATE
-        open_ids = [fp.id for fp in failure_points if fp.verdict == "open"]
+        open_ids     = [fp.id for fp in failure_points if fp.verdict == "open"]
+        med_conf_ids = [fp.id for fp in failure_points
+                        if fp.verdict == "confirmed" and fp.severity == "medium"]
+        constraint_lines = []
+        if open_ids:
+            constraint_lines.append(f"  △ open fp: {open_ids}")
+        if med_conf_ids:
+            constraint_lines.append(
+                f"  ⚠ medium-confirmed fp: {med_conf_ids}"
+                "（縮退版 mitigation 採用済み — 未解決制約として残存）"
+            )
+        constraints = "\n".join(constraint_lines) or "  △ なし"
         rationale = (
-            "高重篤度 confirmed fp なし。"
+            "高重篤度 confirmed fp なし。\n"
             "fp-3 revised_mapping 記述済み（head 単位写像を廃棄、Q/K/V を集合として読む）。\n"
-            "candidate 昇格条件:\n"
+            "candidate 継続条件:\n"
             "  ✓ directionality compatible\n"
             "  ✓ symmetry partial（致命的でない）\n"
             "  ✓ fp-3 revised_mapping 明記済み\n"
-            f"  △ open fp: {open_ids}（fp-2 softmax アナロジー未確立、次検証で確認）\n"
-            "次ステップ: textual_comparison（反証検索として実行）"
+            f"{constraints}"
         )
     else:
         target = PromotionTarget.STAY_EXPLORATION
