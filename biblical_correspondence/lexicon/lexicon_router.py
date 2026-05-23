@@ -2,11 +2,14 @@
 lexicon_router.py — 原語照合 FastAPI ルーター
 
 エンドポイント:
+  GET /api/lexicon/health               データ配置状態のヘルスチェック
   GET /api/lexicon/verse/{ref}          節の完全な原語解析
   GET /api/lexicon/verify/{ref}/{strongs}  節にStrong'sが実在するか検証
   GET /api/lexicon/search/{strongs}     全出現箇所（Hナンバーのみ）
   GET /api/lexicon/word/{strongs}       Strong's辞書エントリ
 """
+
+import json
 
 from fastapi import APIRouter, HTTPException
 from .biblical_lexicon import (
@@ -14,9 +17,80 @@ from .biblical_lexicon import (
     verify_verse,
     search_by_strongs,
     lookup_word,
+    MORPHHB_PATH,
+    MORPHGNT_PATH,
+    STRONGS_HEB,
+    STRONGS_GRK,
 )
 
 router = APIRouter(tags=["lexicon"])
+
+
+@router.get("/health")
+async def get_health():
+    """データ配置状態を返す。
+
+    データが未配置でも 200 を返す — unavailable は故障ではなく「データ未配置」の状態。
+    呼び出し元は status フィールドで "operational" / "degraded" を判断すること。
+
+    verify_verse_status:
+      operational — morphhb が存在し、サニティチェック（Gen.3.5/H3045）が found を返す
+      degraded    — morphhb 未配置（unavailable を返す正常動作）
+    """
+    from pathlib import Path
+
+    # morphhb: wlc/ 配下に .xml ファイルが1つ以上あれば available
+    morphhb_xml_count = len(list(MORPHHB_PATH.glob("*.xml"))) if MORPHHB_PATH.exists() else 0
+    morphhb_status = "available" if morphhb_xml_count > 0 else "missing"
+
+    # morphgnt: .txt ファイルが1つ以上あれば available
+    morphgnt_txt_count = len(list(MORPHGNT_PATH.glob("*.txt"))) if MORPHGNT_PATH.exists() else 0
+    morphgnt_status = "available" if morphgnt_txt_count > 0 else "missing"
+
+    # correspondence_index のエントリ数
+    corr_index_path = Path(__file__).parent.parent / "correspondence" / "correspondence_index.json"
+    corr_entry_count = 0
+    if corr_index_path.exists():
+        try:
+            with open(corr_index_path, encoding="utf-8") as f:
+                corr_entry_count = len(json.load(f).get("entries", []))
+        except Exception:
+            pass
+
+    # verify_verse サニティチェック（データがある場合のみ意味を持つ）
+    verify_status = "degraded"
+    verify_detail = "morphhb missing — verify_verse returns unavailable (expected behavior)"
+    if morphhb_status == "available":
+        probe = verify_verse("Gen.3.5", "H3045")
+        if probe.get("status") == "found":
+            verify_status = "operational"
+            verify_detail = "Gen.3.5/H3045 → found ✓"
+        else:
+            verify_status = "degraded"
+            verify_detail = f"Gen.3.5/H3045 returned {probe.get('status')!r} (expected 'found')"
+
+    return {
+        "morphhb": {
+            "status": morphhb_status,
+            "path": str(MORPHHB_PATH),
+            "xml_files": morphhb_xml_count,
+        },
+        "morphgnt": {
+            "status": morphgnt_status,
+            "path": str(MORPHGNT_PATH),
+            "txt_files": morphgnt_txt_count,
+        },
+        "correspondence_index": {
+            "entry_count": corr_entry_count,
+        },
+        "verify_verse_status": verify_status,
+        "verify_verse_detail": verify_detail,
+        "note": (
+            "morphhb/morphgnt missing は故障ではない。"
+            "scripts/bootstrap_morph_data.sh を実行するとデータが配置される。"
+            "データ未配置時、verify_verse は unavailable を返す（正しい動作）。"
+        ),
+    }
 
 
 @router.get("/verse/{ref:path}")
