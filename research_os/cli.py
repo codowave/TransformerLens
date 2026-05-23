@@ -54,6 +54,20 @@ def main() -> None:
     p_gl.add_argument("--out", type=Path, default=None,
                        help="辞典出力先（省略時: research/glossary/）")
 
+    # verify
+    p_vfy = sub.add_parser("verify", help="仮説の検証タスクを実行")
+    p_vfy.add_argument("file", type=Path, help="検証対象仮説ファイル（.md）")
+    p_vfy.add_argument("--task",
+                        choices=["textual_comparison", "mechanism_mapping"],
+                        required=True,
+                        help="実行する検証タスク")
+    p_vfy.add_argument("--source", default="biblical_correspondence",
+                        help="照合ソース（デフォルト: biblical_correspondence）")
+    p_vfy.add_argument("--dry-run", action="store_true",
+                        help="候補抽出のみ。採択・書き込みなし")
+    p_vfy.add_argument("--out", type=Path, default=None,
+                        help="結果出力先（--dry-run 時は無視）")
+
     args = parser.parse_args()
 
     if args.cmd == "classify":
@@ -85,6 +99,16 @@ def main() -> None:
     elif args.cmd == "glossary":
         from research_os.glossary_builder import build_glossary
         build_glossary(out=args.out)
+
+    elif args.cmd == "verify":
+        from research_os.verifier import verify_hypothesis
+        verify_hypothesis(
+            args.file,
+            task=args.task,
+            source=args.source,
+            dry_run=args.dry_run,
+            out=args.out,
+        )
 
 
 if __name__ == "__main__":
