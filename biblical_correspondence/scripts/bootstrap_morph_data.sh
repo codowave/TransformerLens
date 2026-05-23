@@ -46,7 +46,10 @@ bootstrap_morphhb() {
         git sparse-checkout set "$MORPHHB_SUBDIR"
     )
 
-    cp -r "$TMPDIR_HEB/morphhb/$MORPHHB_SUBDIR" "$MORPHHB_DEST"
+    # mkdir -p してから内容をコピー（ディレクトリ自体ではなく中身を転送する）
+    # cp -r src/wlc dest/wlc はdest/wlc が既存なら dest/wlc/wlc/ になるため ./ 形式を使う
+    mkdir -p "$MORPHHB_DEST"
+    cp -r "$TMPDIR_HEB/morphhb/$MORPHHB_SUBDIR/." "$MORPHHB_DEST/"
     ok "morphhb installed to $MORPHHB_DEST"
     trap - EXIT
     rm -rf "$TMPDIR_HEB"
@@ -70,7 +73,8 @@ bootstrap_morphgnt() {
     trap 'rm -rf "$TMPDIR_GRK"' EXIT
 
     git clone --depth 1 "$MORPHGNT_REPO" "$TMPDIR_GRK/morphgnt"
-    cp -r "$TMPDIR_GRK/morphgnt" "$MORPHGNT_DEST"
+    mkdir -p "$MORPHGNT_DEST"
+    cp -r "$TMPDIR_GRK/morphgnt/." "$MORPHGNT_DEST/"
     ok "morphgnt installed to $MORPHGNT_DEST"
     trap - EXIT
     rm -rf "$TMPDIR_GRK"
