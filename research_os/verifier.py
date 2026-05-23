@@ -243,6 +243,8 @@ def _interpret_mechanism_result(result: dict) -> dict:
     _base = {
         "candidate_upgrade_condition": upgrade_condition,
         "failure_points": failure_points,
+        "failure_points_source": "llm_generated",
+        "failure_points_status": "requires_human_review",
         "reduction_risk_verdict": reduction.get("verdict", "unknown"),
         "ruling_principle": "類比が残るかではなく、類比が何を壊さないかを見る。",
     }
@@ -368,6 +370,8 @@ def _format_ruling_summary(adoption: dict) -> str:
     ]
     fps = adoption.get("failure_points", [])
     lines.append(f"  failure_points                : {len(fps)} 件")
+    lines.append(f"  failure_points_source         : {adoption.get('failure_points_source', '?')}")
+    lines.append(f"  failure_points_status         : {adoption.get('failure_points_status', '?')}")
     for fp in fps:
         lines.append(f"    - {fp}")
     lines.append(f"  reduction_risk.verdict        : {adoption.get('reduction_risk_verdict', '?')}")
