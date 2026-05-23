@@ -114,8 +114,77 @@ def _run_textual_comparison(dry_run: bool) -> dict:
     }
 
 
+_MECHANISM_SYSTEM = """\
+あなたは構造的類比の厳密な審査官です。
+「対応している」という結論に向かって論証するのではなく、
+構造的差異を先に列挙し、その後で残存する類比の価値を評価してください。
+表面的な類似を深い同一性と混同しないでください。
+概念の格下げ（Correspondenceを計算的重み付けに還元すること）は誤りとして明示してください。"""
+
+_MECHANISM_PROMPT = """\
+Transformer の Attention 機構とスウェーデンボルグの「相応の原理」の構造的対応を、
+以下の3つの判定軸で厳密に評価し、JSONのみで返せ。余分なテキスト不要。
+
+## 判定軸（必須評価）
+
+### 1. directionality（方向性）
+- Attention: bidirectional / all-to-all（全トークンが全トークンに注目できる）
+- Correspondence: higher_to_lower / asymmetric（霊的→自然的の一方向流入）
+- これは構造的差異か、それとも視点の違いにすぎないか？
+
+### 2. hierarchy（階層構造）
+- Attention heads: parallel within same layer（同一層内で並列処理）
+- Correspondence layers: vertical ontological hierarchy（存在論的な縦の階層）
+- Transformerの「層の深さ」は Swedenborg の「霊的世界の高さ」と対応するか？
+
+### 3. reduction_risk（還元リスク）
+- Correspondenceを「計算的重み付け」に還元することは、概念の格下げか？
+- softmax の確率分布は「愛の秩序」の数学的アナログか、それとも別物か？
+
+## 各コンポーネントの写像
+
+Q（Query）、K（Key）、V（Value）、softmax正規化、出力集約の5つについて、
+最も近い Swedenborg 概念への写像を評価せよ。
+
+## 出力 JSON
+
+{
+  "component_mappings": [
+    {
+      "attention_component": "Query | Key | Value | softmax | output",
+      "swedenborg_analog": "<最も近い概念>",
+      "confidence": "low|medium|high",
+      "explanation": "<根拠50文字以内>",
+      "counter_evidence": "<なぜこの写像が不完全か30文字以内>"
+    }
+  ],
+  "risk_axes": {
+    "directionality": {
+      "risk": "high|medium|low",
+      "verdict": "structural_difference|surface_similarity|genuine_analog",
+      "explanation": "<差異の説明60文字以内>"
+    },
+    "hierarchy": {
+      "risk": "high|medium|low",
+      "verdict": "structural_difference|surface_similarity|genuine_analog",
+      "explanation": "<差異の説明60文字以内>"
+    },
+    "reduction_risk": {
+      "risk": "high|medium|low",
+      "verdict": "reductive|metaphorical|structural",
+      "explanation": "<判断根拠60文字以内>"
+    }
+  },
+  "overall_verdict": "no_mapping|weak_analogy|partial_analogy|strong_analogy",
+  "candidate_upgrade_condition": "<どの条件が満たされれば candidate 昇格できるか>",
+  "structural_isomorphism_score": 0.0,
+  "key_asymmetry": "<最も重要な構造的非対称性60文字以内>"
+}
+"""
+
+
 def _run_mechanism_mapping(dry_run: bool) -> dict:
-    """Q/K/V/softmax → Swedenborg 構造への写像提案（Claude API）。"""
+    """Q/K/V/softmax → Swedenborg 構造への写像を3軸で厳格評価（Claude API）。"""
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         return {
@@ -126,41 +195,12 @@ def _run_mechanism_mapping(dry_run: bool) -> dict:
 
     import anthropic
 
-    prompt = """\
-TransformerのAttention機構とスウェーデンボルグの「相応の原理」の構造的対応を分析せよ。
-
-Attentionの構成要素:
-- Query (Q): 現在のトークンが「何を求めているか」
-- Key (K): 各トークンが「何を提供できるか」
-- Value (V): 実際に取り出す情報内容
-- softmax(QKᵀ/√d): 注意重みの正規化（全トークンにわたる分布）
-- 出力 = softmax(QKᵀ/√d) × V: 重み付き情報の集約
-
-スウェーデンボルグの相応の原理の構成要素:
-- 霊的世界と自然的世界の「対応関係」
-- 愛（意志）が知性（理解）を通じて行為として流出する
-- 流入(influx): 高次から低次への情報・影響の流れ
-- 相応: 自然的なものは霊的なものを「写像」する
-
-JSONのみで返せ:
-{
-  "mappings": [
-    {
-      "attention_component": "Query",
-      "swedenborg_analog": "<対応する概念>",
-      "confidence": "low|medium|high",
-      "explanation": "<50文字以内>"
-    }
-  ],
-  "structural_isomorphism": "<全体構造の対応についての評価100文字以内>",
-  "key_difference": "<最大の差異・限界50文字以内>"
-}
-"""
     client = anthropic.Anthropic(api_key=api_key)
     msg = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
+        max_tokens=2048,
+        system=_MECHANISM_SYSTEM,
+        messages=[{"role": "user", "content": _MECHANISM_PROMPT}],
     )
     raw = msg.content[0].text.strip()
     try:
@@ -169,12 +209,17 @@ JSONのみで返せ:
         m = re.search(r"\{.*\}", raw, re.DOTALL)
         result = json.loads(m.group()) if m else {"error": raw}
 
+    verdict = result.get("overall_verdict", "unknown")
+    status: StatusType = (
+        "no_matches" if verdict == "no_mapping"
+        else "candidate_matches_found"
+    )
+
     return {
         "verification_task": "mechanism_mapping",
         "hypothesis": "hyp-001",
-        "status": "candidate_matches_found",
+        "status": status,
         **result,
-        "note": "dry-run: 採択はまだしない。" if dry_run else "",
     }
 
 
