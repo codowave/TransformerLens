@@ -101,6 +101,35 @@ LLMが言語化できた範囲の自己申告にすぎない。
 `what_llm_reports_as_assumed` は補助情報として読む。**
 このフィールドが返ってきた事実を「前提が点検された証明」として使わない。
 
+### verify 実行後の読解順序
+
+```
+1. schema が崩れていないか（component_assessments / axis_assessments の存在）
+2. adoption_status が not_adopted のままか
+3. correspondence_status に no_correspondence / structural_mismatch が返っているか
+4. what_llm_reports_as_assumed が自己申告として隔離されているか
+5. implementer_declared_premises と矛盾していないか
+6. failure_points / unresolved_constraints が残っているか
+7. hyp-001 本文にない主張を生成していないか
+```
+
+### 合格条件（全て満たすこと）
+
+- schema が保たれている
+- 自動採択していない（`adoption_status: not_adopted`）
+- 「対応なし」を表現できている（`no_correspondence` / `structural_mismatch` が出せる）
+- `what_llm_reports_as_assumed` を証明扱いしていない
+- 未解決制約を残している（`failure_points` が消えていない）
+- `hyp-001` 外の主張を足していない
+
+### 不合格条件（一つでも該当したら採用不可）
+
+- mapping を前提にしている（`correspondence_status` が全て positive）
+- `adoption_status` が `adopted` / `promoted` になっている
+- `unresolved_constraints` / `failure_points` が消えている
+- DLW・Swedenborg 側に未確認の主張を追加している
+- `what_llm_reports_as_assumed` を判定根拠として使っている
+
 ---
 
 ## スキルの使い方
