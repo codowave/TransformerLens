@@ -481,17 +481,32 @@ _INTERPRETATION_NOTE = {
 }
 
 
+def _next_obs_id(obs_dir: Path) -> str:
+    existing = list(obs_dir.glob("obs-*.md"))
+    nums = []
+    for f in existing:
+        import re as _re
+        m = _re.search(r"obs-(\d+)\.md$", f.name)
+        if m:
+            nums.append(int(m.group(1)))
+    return f"obs-{max(nums, default=0) + 1:03d}"
+
+
 def _build_observation_md(
     result: dict,
     hypothesis_id: str,
     task: TaskType,
     mode: ModeType,
+    out_path: Path | None = None,
 ) -> str:
     from datetime import date
 
+    obs_dir = out_path.parent if out_path else Path("research/observations")
+    obs_id = _next_obs_id(obs_dir)
+
     fm_lines = [
         "---",
-        f"id: obs-001",
+        f"id: {obs_id}",
         f"date: {date.today()}",
         f"source: research_os/verify",
         f"status: observation",
@@ -514,18 +529,58 @@ def _build_observation_md(
         "",
     ]
 
-    matches = result.get("matches", [])
-    if matches:
-        body_lines.append(f"候補マッチ数: {len(matches)}")
-        body_lines.append("")
-        for m in matches:
-            conf = m.get("confidence", "?")
-            conf_mark = {"high": "★★★", "medium": "★★☆", "low": "★☆☆"}.get(conf, conf)
+    if task == "textual_comparison":
+        matches = result.get("matches", [])
+        if matches:
+            body_lines.append(f"候補マッチ数: {len(matches)}")
+            body_lines.append("")
+            for m in matches:
+                conf = m.get("confidence", "?")
+                conf_mark = {"high": "★★★", "medium": "★★☆", "low": "★☆☆"}.get(conf, conf)
+                body_lines += [
+                    f"### {conf_mark} {m.get('swedenborg_term')} ← {m.get('attention_concept')}",
+                    f"- spiritual: {m.get('spiritual')}",
+                    f"- reason: {m.get('reason')}",
+                    f"- ref: {m.get('reference')}",
+                    "",
+                ]
+
+    elif task == "mechanism_mapping":
+        ruling = result.get("adoption_ruling", {})
+        body_lines += [
+            f"adoption_ruling.decision: {ruling.get('decision', '?')}",
+            f"overall_verdict: {result.get('overall_verdict', '?')}",
+            "",
+            "### コンポーネント評価",
+            "",
+        ]
+        for c in result.get("component_assessments", []):
+            cs = c.get("correspondence_status", "?")
             body_lines += [
-                f"### {conf_mark} {m.get('swedenborg_term')} ← {m.get('attention_concept')}",
-                f"- spiritual: {m.get('spiritual')}",
-                f"- reason: {m.get('reason')}",
-                f"- ref: {m.get('reference')}",
+                f"**{c.get('attention_component', '?')}** → `{cs}`",
+                f"- basis: {c.get('basis', '')}",
+                f"- counter_evidence: {c.get('counter_evidence', '')}",
+                "",
+            ]
+        body_lines += ["### 軸評価", ""]
+        for axis, val in result.get("axis_assessments", {}).items():
+            body_lines += [
+                f"**{axis}** verdict: {val.get('verdict', '?')} / risk: {val.get('risk', '?')}",
+                f"- hypothesis_says: {val.get('hypothesis_says', '')}",
+                "",
+            ]
+        fps = ruling.get("failure_points", [])
+        if fps:
+            body_lines += ["### failure_points（llm_generated / requires_human_review）", ""]
+            for fp in fps:
+                body_lines.append(f"- {fp}")
+            body_lines.append("")
+        wlr = result.get("what_llm_reports_as_assumed", "")
+        if wlr:
+            body_lines += [
+                "### what_llm_reports_as_assumed（自己申告 — 補助のみ）",
+                "",
+                wlr,
                 "",
             ]
 
@@ -533,10 +588,6 @@ def _build_observation_md(
         "## 解釈上の注意",
         "",
         _INTERPRETATION_NOTE[mode],
-        "",
-        "### influx系エントリについて",
-        "光・水・風の「高次→低次への伝達」は相応側の方向性の非対称性を示しており、",
-        "双方向的な Attention 機構との差異として反証材料になり得る。",
     ]
 
     return "\n".join(fm_lines) + "\n\n" + "\n".join(body_lines)
@@ -576,14 +627,18 @@ def verify_hypothesis(
         sys.exit(1)
 
     # dry_run: _run_mechanism_mapping がすでに dry_run=True で返す。
-    # ここでは追加の上書きをしない。
     if dry_run:
         _print_result(result, task)
         return
 
+    # unavailable（APIキー未設定等）の場合は保存しない
+    if result.get("status") == "unavailable":
+        print(f"実行不可: {result.get('reason', 'unknown')}", file=sys.stderr)
+        sys.exit(1)
+
     # 保存先が指定されている場合は observation Markdown として書き出す
     if out:
-        obs_md = _build_observation_md(result, hypothesis_id, task, mode)
+        obs_md = _build_observation_md(result, hypothesis_id, task, mode, out_path=out)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(obs_md, encoding="utf-8")
         print(f"観察記録を保存: {out}")
