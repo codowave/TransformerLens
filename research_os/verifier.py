@@ -185,7 +185,7 @@ JSONのみで返せ。余分なテキスト不要。
   }},
   "overall_verdict": "no_mapping | weak_analogy | partial_analogy | strong_analogy",
   "what_hypothesis_claims": "<仮説が実際に主張していること（要約）>",
-  "what_prompt_assumed": "<このプロンプトが仮説テキスト外から持ち込んだ前提のリスト>",
+  "what_llm_reports_as_assumed": "<あなたが言語化できた範囲でプロンプトが持ち込んだ前提。暗黙に通過した前提はここに乗らない>",
   "candidate_upgrade_condition": "<どの条件が満たされれば candidate 昇格できるか>",
   "key_asymmetry": "<最も重要な構造的非対称性>"
 }}
@@ -325,6 +325,19 @@ def _interpret_mechanism_result(result: dict) -> dict:
     }
 
 
+# 実装者が外部から申告する前提リスト。
+# LLMの自己申告（what_llm_reports_as_assumed）では捉えられない暗黙の枠を、
+# プロンプトを書いた実装者が明示する。前提の点検はここが主であり、LLMの申告は補助。
+_IMPLEMENTER_DECLARED_PREMISES = [
+    "Attention を 'bidirectional/all-to-all' と特徴づけた（hyp-001 由来でなく実装者の選択）",
+    "Correspondence を 'higher_to_lower/asymmetric' と特徴づけた（hyp-001 由来でなく実装者の選択）",
+    "検査軸を directionality/hierarchy/reduction_risk の3つに絞った（他の軸を排除）",
+    "分解単位を Q/K/V/softmax/出力集約 の5つに固定した（他の分解方法を排除）",
+    "comparison_status の値域を6つに限定した（値域外の状態を表現できない）",
+    "'軸C: reduction_risk' の問いかけは Correspondence が格下げされうるという想定を含む",
+]
+
+
 def _build_mechanism_payload(hypothesis_body: str) -> dict:
     """送信予定ペイロードを組み立てる。dry_run / 本番の両方で使う。"""
     user_message = _MECHANISM_PROMPT_TEMPLATE.format(
@@ -335,6 +348,13 @@ def _build_mechanism_payload(hypothesis_body: str) -> dict:
         "max_tokens": 2048,
         "system": _MECHANISM_SYSTEM,
         "user_message": user_message,
+        "implementer_declared_premises": _IMPLEMENTER_DECLARED_PREMISES,
+        "premise_audit_note": (
+            "what_llm_reports_as_assumed はLLMが言語化できた範囲の自己申告であり、"
+            "暗黙に通過した前提は原理的にここに乗らない。"
+            "前提の真の点検は implementer_declared_premises（このフィールド）と"
+            "プロンプト本文の外部読解による。"
+        ),
     }
 
 

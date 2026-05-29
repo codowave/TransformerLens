@@ -74,7 +74,32 @@ python -m research_os timeline
 
 # 用語辞典更新
 python -m research_os glossary
+
+# 仮説検証（--dry-run は送信なし・ペイロード表示。APIキー投入前に必ず実行）
+python -m research_os verify research/hypotheses/hyp-001.md --task mechanism_mapping --dry-run
+python -m research_os verify research/hypotheses/hyp-001.md --task mechanism_mapping \
+  --output research/observations/obs-002.md
 ```
+
+## verify コマンドの前提点検ルール
+
+`verify --task mechanism_mapping` を実行する前に必ず `--dry-run` を確認すること。
+
+確認順序:
+1. `api_call: NOT SENT` の表示（送信分岐の確認）
+2. `payload_preview.user_message` に仮説本文が全文入っているか
+3. `payload_preview.implementer_declared_premises` — **前提点検の主体はここ**
+4. `payload_preview.premise_audit_note` を読む
+
+### `what_llm_reports_as_assumed` の限界
+
+出力に含まれる `what_llm_reports_as_assumed` フィールドは、
+LLMが言語化できた範囲の自己申告にすぎない。
+暗黙に通過した前提は定義上このフィールドに乗らない（言語化できれば暗黙でない）。
+
+**前提の真の点検は `implementer_declared_premises` とプロンプト本文の外部読解が主であり、
+`what_llm_reports_as_assumed` は補助情報として読む。**
+このフィールドが返ってきた事実を「前提が点検された証明」として使わない。
 
 ---
 
