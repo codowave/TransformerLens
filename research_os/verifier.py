@@ -115,71 +115,80 @@ def _run_textual_comparison(dry_run: bool) -> dict:
 
 
 _MECHANISM_SYSTEM = """\
-あなたは構造的類比の厳密な審査官です。
-「対応している」という結論に向かって論証するのではなく、
-構造的差異を先に列挙し、その後で残存する類比の価値を評価してください。
-表面的な類似を深い同一性と混同しないでください。
-概念の格下げ（Correspondenceを計算的重み付けに還元すること）は誤りとして明示してください。"""
+あなたは構造的比較の審査官です。
+対応が存在するかどうかを判定するのがあなたの仕事であり、対応を見つけることではありません。
+各コンポーネントについて「対応なし」「非互換」「要原典照合」は正当な結論です。
+以下の3つの検査候補軸は、実装者が設定した仮説的検査軸です。
+これらは「差異があるはずだ」という前提ではなく、「この軸で何が言えるか」を問うものです。
+仮説テキストに書かれていない前提をあなたが追加してはなりません。"""
 
-_MECHANISM_PROMPT = """\
-Transformer の Attention 機構とスウェーデンボルグの「相応の原理」の構造的対応を、
-以下の3つの判定軸で厳密に評価し、JSONのみで返せ。余分なテキスト不要。
+# 3軸の記述は「実装者仮説」としてプロンプト内にラベル付きで配置する。
+# 仮説本文は verify_hypothesis() から動的に注入される（_MECHANISM_PROMPT_TEMPLATE）。
+_MECHANISM_PROMPT_TEMPLATE = """\
+## 仮説テキスト（入力）
 
-## 判定軸（必須評価）
+{hypothesis_body}
 
-### 1. directionality（方向性）
-- Attention: bidirectional / all-to-all（全トークンが全トークンに注目できる）
-- Correspondence: higher_to_lower / asymmetric（霊的→自然的の一方向流入）
-- これは構造的差異か、それとも視点の違いにすぎないか？
+---
 
-### 2. hierarchy（階層構造）
-- Attention heads: parallel within same layer（同一層内で並列処理）
-- Correspondence layers: vertical ontological hierarchy（存在論的な縦の階層）
-- Transformerの「層の深さ」は Swedenborg の「霊的世界の高さ」と対応するか？
+## 検査候補軸（実装者が設定した仮説的検査軸 — 自明な前提ではない）
 
-### 3. reduction_risk（還元リスク）
-- Correspondenceを「計算的重み付け」に還元することは、概念の格下げか？
-- softmax の確率分布は「愛の秩序」の数学的アナログか、それとも別物か？
+### 軸A: directionality（方向性）
+検査候補: Attention は bidirectional/all-to-all であるのに対し、
+Correspondenceは higher_to_lower/asymmetric（霊的→自然的の一方向流入）である可能性がある。
+問い: これは構造的非互換か、視点の違いか、または仮説テキストはこの対比を支持しているか？
 
-## 各コンポーネントの写像
+### 軸B: hierarchy（階層構造）
+検査候補: Attention heads は parallel within same layer で動作するのに対し、
+Correspondence は vertical ontological hierarchy を持つ可能性がある。
+問い: 仮説テキストはこの差異を認識しているか、または別の階層概念を用いているか？
 
-Q（Query）、K（Key）、V（Value）、softmax正規化、出力集約の5つについて、
-最も近い Swedenborg 概念への写像を評価せよ。
+### 軸C: reduction_risk（還元リスク）
+検査候補: Correspondenceを「計算的重み付け」に還元することは、概念の格下げになる可能性がある。
+問い: 仮説テキストはこの還元を行っているか、それとも別の関係を主張しているか？
 
-## 出力 JSON
+---
 
-{
-  "component_mappings": [
-    {
+## 評価指示
+
+各コンポーネント（Q/K/V/softmax/出力集約）について、
+上記仮説テキストに基づいてのみ評価せよ。
+仮説テキストに記述がない場合は requires_source_check または no_correspondence を使え。
+
+JSONのみで返せ。余分なテキスト不要。
+
+{{
+  "component_assessments": [
+    {{
       "attention_component": "Query | Key | Value | softmax | output",
-      "swedenborg_analog": "<最も近い概念>",
-      "confidence": "low|medium|high",
-      "explanation": "<根拠50文字以内>",
-      "counter_evidence": "<なぜこの写像が不完全か30文字以内>"
-    }
+      "correspondence_status": "confirmed_correspondence | possible_correspondence | weak_analogy | structural_mismatch | no_correspondence | requires_source_check",
+      "basis": "<仮説テキスト内の根拠（引用可）または根拠なし>",
+      "counter_evidence": "<なぜ対応が不完全・不存在か>"
+    }}
   ],
-  "risk_axes": {
-    "directionality": {
+  "axis_assessments": {{
+    "directionality": {{
       "risk": "high|medium|low",
-      "verdict": "structural_difference|surface_similarity|genuine_analog",
-      "explanation": "<差異の説明60文字以内>"
-    },
-    "hierarchy": {
+      "verdict": "structural_difference | surface_similarity | genuine_analog | indeterminate",
+      "hypothesis_says": "<仮説テキストはこの軸について何と言っているか、または沈黙しているか>"
+    }},
+    "hierarchy": {{
       "risk": "high|medium|low",
-      "verdict": "structural_difference|surface_similarity|genuine_analog",
-      "explanation": "<差異の説明60文字以内>"
-    },
-    "reduction_risk": {
+      "verdict": "structural_difference | surface_similarity | genuine_analog | indeterminate",
+      "hypothesis_says": "<仮説テキストはこの軸について何と言っているか、または沈黙しているか>"
+    }},
+    "reduction_risk": {{
       "risk": "high|medium|low",
-      "verdict": "reductive|metaphorical|structural",
-      "explanation": "<判断根拠60文字以内>"
-    }
-  },
-  "overall_verdict": "no_mapping|weak_analogy|partial_analogy|strong_analogy",
+      "verdict": "reductive | metaphorical | structural | indeterminate",
+      "hypothesis_says": "<仮説テキストはこの軸について何と言っているか、または沈黙しているか>"
+    }}
+  }},
+  "overall_verdict": "no_mapping | weak_analogy | partial_analogy | strong_analogy",
+  "what_hypothesis_claims": "<仮説が実際に主張していること（要約）>",
+  "what_prompt_assumed": "<このプロンプトが仮説テキスト外から持ち込んだ前提のリスト>",
   "candidate_upgrade_condition": "<どの条件が満たされれば candidate 昇格できるか>",
-  "structural_isomorphism_score": 0.0,
-  "key_asymmetry": "<最も重要な構造的非対称性60文字以内>"
-}
+  "key_asymmetry": "<最も重要な構造的非対称性>"
+}}
 """
 
 
@@ -193,25 +202,27 @@ def _collect_failure_points(result: dict, axes: dict) -> list[str]:
     if reduction.get("verdict") == "reductive":
         points.append(
             f"reduction: Correspondence → 計算的重み付けへの還元 "
-            f"[{reduction.get('explanation', '')}]"
+            f"[{reduction.get('hypothesis_says', reduction.get('explanation', ''))}]"
         )
     if directionality.get("verdict") == "structural_difference":
         points.append(
             f"directionality: all-to-all (Attention) ≠ higher→lower asymmetric (Correspondence) "
-            f"[{directionality.get('explanation', '')}]"
+            f"[{directionality.get('hypothesis_says', directionality.get('explanation', ''))}]"
         )
     if hierarchy.get("verdict") == "structural_difference":
         points.append(
             f"hierarchy: parallel heads within layer ≠ vertical ontological levels "
-            f"[{hierarchy.get('explanation', '')}]"
+            f"[{hierarchy.get('hypothesis_says', hierarchy.get('explanation', ''))}]"
         )
 
-    # component_mappings の counter_evidence からも収集
-    for m in result.get("component_mappings", []):
+    # component_assessments の counter_evidence からも収集
+    for m in result.get("component_assessments", result.get("component_mappings", [])):
+        # 新スキーマ: component_assessments
+        cs = m.get("correspondence_status", "")
         ce = m.get("counter_evidence", "")
-        if ce and m.get("confidence") == "low":
+        if cs in ("no_correspondence", "structural_mismatch", "requires_source_check") and ce:
             points.append(
-                f"component/{m.get('attention_component', '?')}: {ce}"
+                f"component/{m.get('attention_component', '?')} [{cs}]: {ce}"
             )
 
     key_asym = result.get("key_asymmetry", "")
@@ -232,7 +243,7 @@ def _interpret_mechanism_result(result: dict) -> dict:
       4. candidate_upgrade_condition
       5. overall_verdict
     """
-    axes = result.get("risk_axes", {})
+    axes = result.get("axis_assessments", result.get("risk_axes", {}))
     reduction = axes.get("reduction_risk", {})
     directionality = axes.get("directionality", {})
     hierarchy = axes.get("hierarchy", {})
@@ -314,8 +325,36 @@ def _interpret_mechanism_result(result: dict) -> dict:
     }
 
 
-def _run_mechanism_mapping(dry_run: bool) -> dict:
-    """Q/K/V/softmax → Swedenborg 構造への写像を3軸で厳格評価（Claude API）。"""
+def _build_mechanism_payload(hypothesis_body: str) -> dict:
+    """送信予定ペイロードを組み立てる。dry_run / 本番の両方で使う。"""
+    user_message = _MECHANISM_PROMPT_TEMPLATE.format(
+        hypothesis_body=hypothesis_body.strip()
+    )
+    return {
+        "model": "claude-sonnet-4-6",
+        "max_tokens": 2048,
+        "system": _MECHANISM_SYSTEM,
+        "user_message": user_message,
+    }
+
+
+def _run_mechanism_mapping(dry_run: bool, hypothesis_body: str = "") -> dict:
+    """Q/K/V/softmax → Swedenborg 構造への写像を3軸で厳格評価（Claude API）。
+
+    dry_run=True: API送信なし・ファイル書き込みなし・ペイロードを表示して返す。
+    """
+    payload = _build_mechanism_payload(hypothesis_body)
+
+    # dry_run は API 呼び出しより前に分岐する
+    if dry_run:
+        return {
+            "verification_task": "mechanism_mapping",
+            "dry_run": True,
+            "api_call": "NOT SENT",
+            "payload_preview": payload,
+            "note": "dry-run: 外部送信なし・書き込みなし。上記ペイロードが送信予定内容。",
+        }
+
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         return {
@@ -328,10 +367,10 @@ def _run_mechanism_mapping(dry_run: bool) -> dict:
 
     client = anthropic.Anthropic(api_key=api_key)
     msg = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=2048,
-        system=_MECHANISM_SYSTEM,
-        messages=[{"role": "user", "content": _MECHANISM_PROMPT}],
+        model=payload["model"],
+        max_tokens=payload["max_tokens"],
+        system=payload["system"],
+        messages=[{"role": "user", "content": payload["user_message"]}],
     )
     raw = msg.content[0].text.strip()
     try:
@@ -495,26 +534,30 @@ def verify_hypothesis(
         print(f"エラー: ファイルが見つかりません: {file}", file=sys.stderr)
         sys.exit(1)
 
-    # 仮説IDを front-matter から取得
+    # front-matter と本文を分離して読み込む
     text = file.read_text(encoding="utf-8")
     hypothesis_id = file.stem  # fallback
+    hypothesis_body = text
     if text.startswith("---"):
         end = text.find("---", 3)
         if end != -1:
-            for line in text[3:end].splitlines():
+            fm_block = text[3:end]
+            hypothesis_body = text[end + 3:].strip()
+            for line in fm_block.splitlines():
                 if line.startswith("id:"):
                     hypothesis_id = line.partition(":")[2].strip()
 
     if task == "textual_comparison":
         result = _run_textual_comparison(dry_run)
     elif task == "mechanism_mapping":
-        result = _run_mechanism_mapping(dry_run)
+        result = _run_mechanism_mapping(dry_run, hypothesis_body=hypothesis_body)
     else:
         print(f"エラー: 未知のタスク: {task}", file=sys.stderr)
         sys.exit(1)
 
+    # dry_run: _run_mechanism_mapping がすでに dry_run=True で返す。
+    # ここでは追加の上書きをしない。
     if dry_run:
-        result["dry_run"] = True
         _print_result(result, task)
         return
 
