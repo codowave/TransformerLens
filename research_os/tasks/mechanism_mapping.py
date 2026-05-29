@@ -169,12 +169,14 @@ def _evaluate_failure_points(claims: dict) -> list[FailurePoint]:
     if fp2_mitigation_rejected and fp2_has_mitigation_text:
         fp2_verdict = "confirmed"
         fp2_detail = (
-            "「attention score = 受容度」の写像を拒否（DLW.55/56 による）。\n"
+            "「attention score = 受容度」の写像を拒否。\n"
+            "理由: softmax は水平・ゼロ和の競合的重み配分。"
+            "Swedenborg の受容は垂直・単一源・form による流入。両者は構造的に直交する。\n"
+            "（DLW.55/56 は原典未照合の参考候補として索引収録済み——棄却根拠ではない）\n"
             "縮退版 mitigation 採用:\n"
-            "  - attention 重み付けは「選択的強調の弱いアナロジー」にとどめる\n"
-            "  - 受容そのものへの写像は不可（受容は form による定性的構造）\n"
+            "  - attention 重み付けは受容にも選択的強調にも写像しない\n"
             "  - fp-2 は medium-confirmed として未解決制約として残る\n"
-            "  - stage: candidate は維持するが softmax 対応は大幅に削減"
+            "  - stage: candidate は維持するが softmax 対応は完全に削除"
         )
     elif fp2_tc_falsified:
         fp2_verdict = "confirmed"
