@@ -111,6 +111,21 @@ lint が検出するのは「人間による確認が必要」という要確認
 
 旧形式の節単位ファイルパス（例: `genesis/004-001.md`）は**無効**として警告する。
 
+### R-02 connection-source はインラインリスト形式で記述する
+`connection-source` は当面、`[本文文脈由来, AI対話由来]` のようなインラインリスト形式で記述する。
+
+```yaml
+# 正しい（インライン）
+connection-source: [原語由来, 本文文脈由来]
+
+# lint 対象外（複数行リスト）
+connection-source:
+  - 原語由来
+  - 本文文脈由来
+```
+
+複数行 YAML リストは `lint_vault.py` の解析対象外とする。将来的にパーサを強化した場合はこのルールを更新する。
+
 ---
 
 ## Provisional / Confirmed ファイルのルール
