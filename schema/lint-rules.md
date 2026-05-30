@@ -60,25 +60,26 @@
 - `connection-source: [本文文脈由来]` のとき `claim-type: metaphor` は正当です。
 - `connection-source: [原語由来]` のとき `claim-type: hypothesis` は正当です。
 
-lint が検出するのは「この組み合わせは**確実に問題**」という狭い禁止リストのみです。  
+lint が検出するのは「人間による確認が必要」という要確認フラグのみです。  
 密なマッピング（○○由来なら○○型であるべき）は lint の責務外であり、人間の裁定に委ねます。
 
-### M-01 🔴 要注意：独立検証不能な発生源のみで fact 主張
-**条件**: `claim-type: fact` かつ `connection-source` が以下のいずれか**のみ**で構成される：
-- `[解釈者由来]` のみ
-- `[AI対話由来]` のみ
-- `[複数AI一致由来]` のみ
-- `[比喩・類似由来]` のみ
-- `[語感・形状由来]` のみ
+### M-01 🟡 要確認：fact 主張に補助資料源が含まれる
+**条件**: `claim-type: fact` かつ `connection-source` に以下の補助資料源が1つ以上**含まれる**：
+- `解釈者由来`
+- `AI対話由来`
+- `複数AI一致由来`
+- `比喩・類似由来`
+- `語感・形状由来`
 
-**検出**: `claim-type` が `fact` かつ `connection-source` の全要素が上記5種のいずれかに属し、それ以外の類型（原語由来・本文文脈由来・現場経験由来）が1つも含まれない。  
-**理由**: これら5類型は `adoption-gate.md` に明記された採択禁止理由に該当する発生源であり、単独では「事実」主張を支えられない。他の類型が1つでも加わっている場合は警告しない。  
-**許可される組み合わせの例（変更不要）**:
-- `connection-source: [原語由来]` / `claim-type: hypothesis` → 許可
-- `connection-source: [本文文脈由来]` / `claim-type: metaphor` → 許可
-- `connection-source: [解釈者由来]` / `claim-type: hypothesis` → 許可
-- `connection-source: [現場経験由来]` / `claim-type: application` → 許可
-- `connection-source: [解釈者由来, 本文文脈由来]` / `claim-type: fact` → 許可（原語等との混在があるため）
+**検出**: `claim-type` が `fact` かつ `connection-source` の要素に上記5種のいずれかが1つでも存在する。一次資料源（原語由来・本文文脈由来・現場経験由来）との混在であっても警告する。  
+**理由**: 補助資料源は `adoption-gate.md` に明記された採択禁止理由に該当する発生源であり、一次資料と混在していても「事実」主張の根拠として使われていないことを人間が確認する必要がある。lint は禁止しないが、確認を促す。  
+**対応**: 確認来歴の「確認の対象は何か」欄で、補助資料源の発見がどのように扱われているかを明記する。
+
+**このルールが警告しない組み合わせの例**:
+- `connection-source: [原語由来]` / `claim-type: hypothesis` → 対象外（claim-type が fact でない）
+- `connection-source: [本文文脈由来]` / `claim-type: metaphor` → 対象外（claim-type が fact でない）
+- `connection-source: [解釈者由来]` / `claim-type: hypothesis` → 対象外（claim-type が fact でない）
+- `connection-source: [現場経験由来]` / `claim-type: application` → 対象外（claim-type が fact でない）
 
 ### V-01 🔴 要注意：connection-source に claim-type 語彙が混入
 **条件**: `connection-source` に `claim-type` の値（`fact` / `hypothesis` / `metaphor` / `interpretation` / `application` / `mixed`）が含まれている。  
