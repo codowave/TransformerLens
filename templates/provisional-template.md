@@ -3,7 +3,7 @@ stage: provisional
 created: YYYY-MM-DD
 promoted: YYYY-MM-DD
 connection-type: []
-fact-status: 未検証
+fact-status: 暫定確認済み
 ---
 
 # 暫定確認: {{接続のタイトル}}
@@ -49,8 +49,7 @@ fact-status: 未検証
 
 ## 事実 / 仮説 / 比喩 / 未検証 の区分
 
-- **区分**: 
-- **理由**: 
+- **理由**: （フロントマターの `fact-status` に指定した区分の選択理由を記述）
 
 ---
 
