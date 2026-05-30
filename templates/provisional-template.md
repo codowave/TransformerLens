@@ -78,6 +78,10 @@ connection-type: []
 
 > **必須**: provisional 昇格には AI を経由しない直接確認が 1 件以上必要です。
 
+> [!NOTE] 運用ルール
+> `claim-type: hypothesis`（仮説）または `claim-type: interpretation`（解釈）の属性を維持したまま `fact-status: confirmed` に移行する場合は、上記の項目を必ず埋め、「何が confirmed なのか」を具体的に明記すること。
+> 例：仮説としての位置づけが確定したのか、解釈として保存する妥当性が確認されたのか、適用限界が明確になったのか。
+
 ### 確認 #1
 
 | 項目 | 内容 |
