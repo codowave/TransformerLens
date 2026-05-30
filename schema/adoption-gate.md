@@ -73,6 +73,54 @@ AIが生成した接続、または根拠が未検証の接続を置く場所で
 
 ---
 
+## フィールド分離の原則
+
+`fact-status`・`claim-type`・`connection-source` は互いに独立した軸です。混同すると辞典全体の一貫性が失われます。
+
+| フィールド | 問い | 値の語彙 |
+|---|---|---|
+| `fact-status` | このファイルは今どの採択ステージか | `candidate` / `provisional` / `confirmed` |
+| `claim-type` | この接続の主張の型は何か | `fact` / `hypothesis` / `metaphor` / `interpretation` / `application` / `mixed` |
+| `connection-source` | この接続はどこから来たか | 接続由来8類型（日本語配列） |
+
+**発生源と主張型を分けることがこの設計の核心です。**  
+`connection-source: interpretation` のようなスカラー英語値は語彙の混入であり、lint ルール V-01 で検出されます。
+
+---
+
+## 典型パターン
+
+以下の3例が各ステージの代表的な frontmatter です。
+
+### パターン1：解釈者由来の未検証解釈候補
+```yaml
+fact-status: candidate
+claim-type: interpretation
+connection-source: [解釈者由来]
+```
+スウェーデンボルグ等の解釈者から来た未検証の解釈候補。  
+解釈者由来は補助資料のため、AI外部直接確認なしには provisional に昇格できない。
+
+### パターン2：原語・本文から出た仮説（暫定確認済み）
+```yaml
+fact-status: provisional
+claim-type: hypothesis
+connection-source: [原語由来, 本文文脈由来]
+```
+原語・本文から導いた仮説で、AI外部直接確認を少なくとも1件通過したもの。  
+仮説のままであることは正当。確認を重ねることで claim-type が fact に更新されることもある。
+
+### パターン3：原語確認済みの事実項目
+```yaml
+fact-status: confirmed
+claim-type: fact
+connection-source: [原語由来]
+```
+原語を直接確認し、複数条件と再検証を通過した確定接続。  
+claim-type を fact にするには、仮説・比喩段階を経て十分な確認が積み上がっていること。
+
+---
+
 ## ダウングレード
 
 昇格後に矛盾が発見された場合は、一段階下のステージに戻すことができます。  
