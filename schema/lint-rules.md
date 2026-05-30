@@ -69,6 +69,23 @@
 **検出**: frontmatter の `claim-type` が `application` で、`connection-source` に「現場経験由来」が存在しない。  
 **理由**: 適用主張は現場・体験との接点を持つのが自然。`raw/field-notes/` 参照の有無も併せて確認する。
 
+### V-01 🔴 要注意：connection-source に claim-type 語彙が混入
+**条件**: `connection-source` に `claim-type` の値（`fact` / `hypothesis` / `metaphor` / `interpretation` / `application` / `mixed`）が含まれている。  
+**検出**: frontmatter の `connection-source` 配列の要素が上記英語値のいずれかと一致する。  
+**理由**: `connection-source` の有効値は接続由来8類型（日本語）のみ。`interpretation` は `claim-type` の値であり `connection-source` には使わない。
+  典型的な混入パターン:
+  - `connection-source: interpretation` → 誤り。`connection-source: [解釈者由来]` かつ `claim-type: interpretation` が正しい
+  - `connection-source: hypothesis` → 誤り。`claim-type: hypothesis` が正しい場所
+**有効な connection-source 値**:
+  `原語由来` / `本文文脈由来` / `現場経験由来` / `比喩・類似由来` / `語感・形状由来` / `複数AI一致由来` / `解釈者由来` / `AI対話由来`
+
+### V-02 🔴 要注意：connection-source が配列でない
+**条件**: `connection-source` が配列ではなくスカラー値（文字列・数値等）で記述されている。  
+**検出**: frontmatter の `connection-source` が `[]` または `[...]` 形式でない。  
+**例**:
+  - `connection-source: 解釈者由来` → 誤り（スカラー）
+  - `connection-source: [解釈者由来]` → 正しい（配列）
+
 ---
 
 ## Raw 参照形式のルール
