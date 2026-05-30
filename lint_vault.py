@@ -18,9 +18,10 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 PLACEHOLDERS = {
-    "", "TODO", "TBD", "未記入", "後で", "要記入", "N/A", "-",
-    "（後で）", "(後で)",
+    "", "未記入", "後で", "要記入", "（後で）", "(後で)",
 }
+
+# TODO / TBD は大文字小文字を無視して未記入扱い（is_empty_or_placeholder 内で処理）
 
 AUXILIARY_SOURCES = {
     "解釈者由来", "AI対話由来", "複数AI一致由来", "複数AI一致",
@@ -46,10 +47,39 @@ EXCLUDED_FILENAMES = {
 # フロントマター解析（インラインリスト形式のみ対応）
 # ---------------------------------------------------------------------------
 
+def detect_multiline_connection_source(content: str, path: Path) -> list[str]:
+    """フロントマター内で複数行リスト形式の connection-source を検出してエラーを返す。
+
+    例（エラー対象）:
+        connection-source:
+          - 本文文脈由来
+          - AI対話由来
+    """
+    issues: list[str] = []
+    if not content.startswith("---"):
+        return issues
+    end = content.find("---", 3)
+    if end == -1:
+        return issues
+    fm_block = content[3:end]
+    lines = fm_block.splitlines()
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped == "connection-source:" or stripped.startswith("connection-source: ") and not stripped[len("connection-source:"):].strip().startswith("["):
+            # 次の行が "  - " で始まるなら複数行リスト
+            if i + 1 < len(lines) and re.match(r"^\s+-\s+", lines[i + 1]):
+                issues.append(
+                    f"[R-02 🔴 Error] {path}: connection-source が複数行リスト形式です。"
+                    " インラインリスト形式で記述してください。"
+                    " 例: connection-source: [本文文脈由来, AI対話由来]"
+                )
+    return issues
+
+
 def parse_frontmatter(content: str) -> dict:
     """YAMLフロントマターを簡易パースする。
-    connection-source は [a, b, c] 形式（インライン）のみ対象。
-    複数行リストは lint 対象外（lint-rules.md R-01 参照）。
+    connection-source は [a, b, c] 形式（インライン）のみ解析対象。
+    複数行リストは detect_multiline_connection_source で別途エラーとして検出する。
     """
     fm: dict = {}
     if not content.startswith("---"):
@@ -74,18 +104,30 @@ def parse_frontmatter(content: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def get_history_field_value(section: str, field: str):
-    """確認来歴セクションのテーブル行から指定フィールドの値を返す。
-    見つからなければ None を返す。
+    """確認来歴セクションから指定フィールドの値を返す。見つからなければ None。
+
+    以下の2形式に対応する:
+    - テーブル行:       | 確認者 | 山田太郎 |
+    - インデント付きリスト:     - **確認者**: 山田太郎
     """
-    pattern = rf"^\|\s*{re.escape(field)}\s*\|\s*(.*?)\s*\|"
-    m = re.search(pattern, section, re.MULTILINE)
-    return m.group(1).strip() if m else None
+    escaped = re.escape(field)
+    # テーブル形式
+    m = re.search(rf"^\|\s*{escaped}\s*\|\s*(.*?)\s*\|", section, re.MULTILINE)
+    if m:
+        return m.group(1).strip()
+    # インデント付きリスト形式: ^\s*-\s*\*\*field\*\*:\s*(.*)$
+    m = re.search(rf"^\s*-\s*\*\*{escaped}\*\*:\s*(.*)$", section, re.MULTILINE)
+    if m:
+        return m.group(1).strip()
+    return None
 
 
 def is_empty_or_placeholder(value) -> bool:
     if value is None:
         return True
     normalized = value.strip().strip("。").strip("（").strip("）").strip()
+    if normalized.upper() in {"TODO", "TBD"}:
+        return True
     return normalized in PLACEHOLDERS
 
 # ---------------------------------------------------------------------------
@@ -94,6 +136,10 @@ def is_empty_or_placeholder(value) -> bool:
 
 def check_candidates(path: Path, content: str, fm: dict) -> list[str]:
     issues: list[str] = []
+
+    # R-02: 複数行 YAML リスト形式の検出
+    issues += detect_multiline_connection_source(content, path)
+
     sources = fm.get("connection-source", [])
 
     # V-02: connection-source がスカラー（配列でない）
