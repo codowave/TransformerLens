@@ -187,3 +187,79 @@ def test_F_scripture_source_with_metaphor_no_issues():
     """F: connection-source=[本文文脈由来] + claim-type=metaphor は issue なし"""
     issues = issues_for_content(CASE_F)
     assert issues == [], f"Expected no issues, got: {issues}"
+
+
+# ---------------------------------------------------------------------------
+# 境界正常系（鳴りそうで鳴ってはいけない）
+# ---------------------------------------------------------------------------
+
+CASE_G = """\
+---
+stage: confirmed
+fact-status: confirmed
+claim-type: hypothesis
+connection-source: [原語由来]
+---
+
+# テストG（confirmed hypothesis — 入れ子リスト形式、正しく記入済み）
+
+raw/strongs/H3045.md への参照。
+
+## 確認来歴
+
+    - **確認者**: 山田太郎
+    - **確認日時**: 2026-06-01
+    - **AIを経由しない直接確認の種類**: 原語辞典（BDB）の直接参照
+    - **確認の対象は何か**: 仮説としての位置づけ（BDDでの語義幅がこの仮説を支持することを確認）
+
+## 再検証ログ
+
+再検証 #1 実施: 2026-06-15 / 結果: 支持 / 矛盾: なし
+"""
+
+
+def test_G_confirmed_hypothesis_with_nested_list_history_no_error():
+    """G: claim-type=hypothesis + confirmed、確認来歴が入れ子リスト形式で正しく記入済み → Error なし
+    get_history_field_value がインデント付きリスト形式を正しく拾うことを確認する。
+    """
+    issues = issues_for_content(CASE_G, checker=check_confirmed)
+    p02_issues = [i for i in issues if "P-02" in i]
+    assert p02_issues == [], (
+        f"Expected no P-02 errors for properly filled nested list history, got: {p02_issues}"
+    )
+
+
+CASE_H = """\
+---
+stage: confirmed
+fact-status: confirmed
+claim-type: hypothesis
+connection-source: [原語由来]
+---
+
+# テストH（confirmed hypothesis — 「確認の対象は何か」が N/A）
+
+raw/strongs/H3045.md への参照。
+
+## 確認来歴
+
+    - **確認者**: 山田太郎
+    - **確認日時**: 2026-06-01
+    - **AIを経由しない直接確認の種類**: 原語辞典（BDB）の直接参照
+    - **確認の対象は何か**: N/A（この接続に適用可能性は該当しないと判断）
+
+## 再検証ログ
+
+再検証 #1 実施: 2026-06-15 / 結果: 支持 / 矛盾: なし
+"""
+
+
+def test_H_na_in_confirmation_target_is_not_empty_error():
+    """H: 「確認の対象は何か」の値が N/A のとき P-02 未記入エラーにならないこと。
+    N/A は「該当なしと判断済み」を意味するため、未記入扱いにしない。
+    """
+    issues = issues_for_content(CASE_H, checker=check_confirmed)
+    p02_issues = [i for i in issues if "P-02" in i]
+    assert p02_issues == [], (
+        f"Expected no P-02 errors for N/A value in confirmation target, got: {p02_issues}"
+    )
