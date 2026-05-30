@@ -1,8 +1,10 @@
 ---
 stage: candidates
 created: YYYY-MM-DD
+fact-status: candidate
+claim-type: hypothesis
+connection-source: []
 connection-type: []
-fact-status: 未検証
 ---
 
 # 候補: {{接続のタイトル}}
@@ -37,7 +39,8 @@ fact-status: 未検証
 
 ## なぜこの接続を生成したか
 
-<!-- 以下の類型から該当するものを選び、対応する raw/ 参照パスを明記する -->
+<!-- 該当する類型を ☑ にして raw/ 参照パスを明記し、frontmatter の connection-source にも同じ値を配列で反映する。
+     例: connection-source: [本文文脈由来, 原語由来] -->
 
 | 類型 | 該当 | raw/ 参照パス |
 |---|---|---|
@@ -52,9 +55,13 @@ fact-status: 未検証
 
 ---
 
-## 事実 / 仮説 / 比喩 / 未検証 の区分
+## 主張の種類（claim-type）
 
-- **理由**: （フロントマターの `fact-status` に指定した区分の選択理由を記述）
+<!-- frontmatter の claim-type に以下から1つ選んで設定する:
+     fact（事実）/ hypothesis（仮説）/ metaphor（比喩）/
+     interpretation（解釈）/ application（適用）/ mixed（混在） -->
+
+- **理由**: （frontmatter の `claim-type` に選択した値の根拠を記述。mixed の場合は内訳をここに記録する）
 
 ---
 

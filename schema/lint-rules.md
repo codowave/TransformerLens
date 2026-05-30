@@ -44,6 +44,44 @@
 > スウェーデンボルグ的発想を `raw/scripture/` 参照で偽装するケース（「本文文脈由来」と表示しながら実質は解釈者由来の推論である場合）は、  
 > ファイル構造からは自動検出できません。この判断は人間の裁定に委ねます。
 
+### C-05 🟡 要確認：本文文脈由来と解釈者由来の混在
+**条件**: `connection-source` に「本文文脈由来」が含まれ、かつ `raw/swedenborg/` 等の解釈者資料への参照も含まれている。  
+**検出**: frontmatter `connection-source` に「本文文脈由来」があり、本文参照欄に `raw/swedenborg/`（または `raw/articles/` 内の解釈者文献）のパスが存在する。  
+**理由**: 本文由来と解釈者由来の混在は正当な場合もあるが、解釈者推論を本文由来として誤分類するリスクがある。人間による明示的な確認を促す。  
+**推奨対応**: `claim-type: mixed` に変更し、それぞれの根拠を分けて記述する。
+
+---
+
+## Connection-Source × Claim-Type 整合性ルール
+
+### M-01 🔴 要注意：fact 主張なのに検証不能な類型のみ
+**条件**: `claim-type: fact` かつ `connection-source` が「比喩・類似由来」「語感・形状由来」「複数AI一致由来」「AI対話由来」のいずれかのみ。  
+**検出**: frontmatter の `claim-type` が `fact` で、`connection-source` に原語由来・本文文脈由来・現場経験由来・解釈者由来のいずれも含まれない。  
+**理由**: 事実主張は原語・本文・現場等の検証可能な根拠を必要とする。比喩や語感・AI同意だけを根拠に「事実」と主張することは採択禁止理由に該当する。
+
+### M-02 🟡 要確認：interpretation 主張なのに解釈根拠がない
+**条件**: `claim-type: interpretation` かつ `connection-source` に「解釈者由来」も「本文文脈由来」も含まれない。  
+**検出**: frontmatter の `claim-type` が `interpretation` で、`connection-source` に上記2類型が存在しない。  
+**理由**: 解釈主張は本文か解釈者著作への参照を自然に伴うべき。根拠が「現場経験由来」や「比喩・類似由来」のみであれば claim-type の見直しを促す。
+
+### M-03 🟡 要確認：application 主張なのに現場根拠がない
+**条件**: `claim-type: application` かつ `connection-source` に「現場経験由来」が含まれない。  
+**検出**: frontmatter の `claim-type` が `application` で、`connection-source` に「現場経験由来」が存在しない。  
+**理由**: 適用主張は現場・体験との接点を持つのが自然。`raw/field-notes/` 参照の有無も併せて確認する。
+
+---
+
+## Raw 参照形式のルール
+
+### R-01 有効な raw/scripture/ 参照形式
+`raw/scripture/` への参照は以下のいずれかの形式を有効とする：
+- 章ファイル参照: `raw/scripture/{書名略語}/{章番号3桁}.md`  
+  例: `raw/scripture/genesis/004.md`
+- 章ファイル＋ヘッダーリンク（節参照）: `raw/scripture/{書名略語}/{章番号3桁}.md#{節識別子}`  
+  例: `raw/scripture/genesis/004.md#1`
+
+旧形式の節単位ファイルパス（例: `genesis/004-001.md`）は**無効**として警告する。
+
 ---
 
 ## Provisional / Confirmed ファイルのルール
