@@ -80,7 +80,7 @@ connection-type: []
 > **必須**: 全ての直接確認を時系列で記録する。
 
 > [!NOTE] 運用ルール
-> `claim-type: hypothesis`（仮説）または `claim-type: interpretation`（解釈）の属性を維持したまま `fact-status: confirmed` に移行する場合は、上記の項目を必ず埋め、「何が confirmed なのか（例：この仮説を confirmed hypothesis として保存する理由、この解釈を confirmed interpretation として保存する理由、適用限界など、確定させた位置づけの具体）」を明記すること。
+> `claim-type: hypothesis`（仮説）または `claim-type: interpretation`（解釈）の属性を維持したまま `fact-status: confirmed` に移行する場合は、**確認来歴の各項目**を必ず埋め、「何が confirmed なのか（例：この仮説を confirmed hypothesis として保存する理由、この解釈を confirmed interpretation として保存する理由、適用限界など、確定させた位置づけの具体）」を明記すること。
 
 ### 確認 #1（初回 provisional 昇格時）
 
