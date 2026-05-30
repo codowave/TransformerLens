@@ -83,41 +83,51 @@ AIが生成した接続、または根拠が未検証の接続を置く場所で
 | `claim-type` | この接続の主張の型は何か | `fact` / `hypothesis` / `metaphor` / `interpretation` / `application` / `mixed` |
 | `connection-source` | この接続はどこから来たか | 接続由来8類型（日本語配列） |
 
-**発生源と主張型を分けることがこの設計の核心です。**  
+**発生源と主張型は直交軸です。**  
+発生源が何であるかは主張型を一意に決定しません。同じ発生源から複数の主張型が生まれえます。  
 `connection-source: interpretation` のようなスカラー英語値は語彙の混入であり、lint ルール V-01 で検出されます。
 
 ---
 
 ## 典型パターン
 
-以下の3例が各ステージの代表的な frontmatter です。
+`connection-source` と `claim-type` は独立して選びます。以下の例は、同じ発生源から異なる主張型が生まれること、および見かけ上「不一致」に見えるペアも正当であることを示します。
 
-### パターン1：解釈者由来の未検証解釈候補
+### パターン1：解釈者由来 × 仮説（"不一致"に見えるが正当）
 ```yaml
 fact-status: candidate
-claim-type: interpretation
+claim-type: hypothesis
 connection-source: [解釈者由来]
 ```
-スウェーデンボルグ等の解釈者から来た未検証の解釈候補。  
-解釈者由来は補助資料のため、AI外部直接確認なしには provisional に昇格できない。
+スウェーデンボルグの記述から着想を得たが、まだ仮説として扱っている候補。  
+解釈者由来だからといって `claim-type: interpretation` にする必要はない。
 
-### パターン2：原語・本文から出た仮説（暫定確認済み）
+### パターン2：原語由来 × 仮説
 ```yaml
 fact-status: provisional
 claim-type: hypothesis
-connection-source: [原語由来, 本文文脈由来]
+connection-source: [原語由来]
 ```
-原語・本文から導いた仮説で、AI外部直接確認を少なくとも1件通過したもの。  
-仮説のままであることは正当。確認を重ねることで claim-type が fact に更新されることもある。
+原語語義から着想した接続で、AI外部直接確認を1件通過したもの。  
+原語確認が済んでも、接続の解釈に不確かさが残れば `hypothesis` のままで正当。
 
-### パターン3：原語確認済みの事実項目
+### パターン3：本文文脈由来 × 比喩（発生源と型が直交する例）
+```yaml
+fact-status: candidate
+claim-type: metaphor
+connection-source: [本文文脈由来]
+```
+本文の文脈から見いだされた比喩的接続。  
+「本文から来た」ことと「比喩的主張である」ことは矛盾しない。
+
+### パターン4：原語由来 × 事実（確定接続の典型）
 ```yaml
 fact-status: confirmed
 claim-type: fact
 connection-source: [原語由来]
 ```
 原語を直接確認し、複数条件と再検証を通過した確定接続。  
-claim-type を fact にするには、仮説・比喩段階を経て十分な確認が積み上がっていること。
+`claim-type: fact` にするには発生源にかかわらず、十分な確認の積み上げが必要。
 
 ---
 
