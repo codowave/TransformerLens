@@ -130,6 +130,31 @@ def is_empty_or_placeholder(value) -> bool:
         return True
     return normalized in PLACEHOLDERS
 
+
+_STRONGS_RE = re.compile(r"^[HG]\d+$")
+
+
+def check_strongs_format(path: Path, fm: dict) -> list[str]:
+    """S-01: strongs フィールドの各要素が [HG]\\d+ 形式かを検査する。"""
+    issues: list[str] = []
+    strongs = fm.get("strongs")
+    if strongs is None:
+        return issues
+    if isinstance(strongs, str):
+        issues.append(
+            f"[S-01 🟡 要確認] {path}: strongs がスカラーです。"
+            " インラインリスト形式で記述してください。例: strongs: [H3045, H7069]"
+        )
+        return issues
+    if isinstance(strongs, list):
+        bad = [v for v in strongs if not _STRONGS_RE.match(str(v))]
+        if bad:
+            issues.append(
+                f"[S-01 🟡 要確認] {path}: strongs の値 {bad} が [HG]\\d+ 形式ではありません。"
+                " 例: H3045, G25"
+            )
+    return issues
+
 # ---------------------------------------------------------------------------
 # チェック関数
 # ---------------------------------------------------------------------------
@@ -139,6 +164,9 @@ def check_candidates(path: Path, content: str, fm: dict) -> list[str]:
 
     # R-02: 複数行 YAML リスト形式の検出
     issues += detect_multiline_connection_source(content, path)
+
+    # S-01: strongs フォーマット検証
+    issues += check_strongs_format(path, fm)
 
     sources = fm.get("connection-source", [])
 
