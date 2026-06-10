@@ -356,6 +356,25 @@ def run(hypothesis: dict, dry_run: bool = True) -> MechanismMappingResult:
                     hypothesis,
                   )
 
+    # blocked_by フィールドが promotion_to_verified をブロックしている場合、
+    # candidate への到達はできても verified への昇格は抑止する。
+    # blocked_by: のみ（値なし）で None になる場合と非リスト型を防御する。
+    blocked_by = hypothesis.get("blocked_by") or []
+    if not isinstance(blocked_by, list):
+        blocked_by = []
+    promotion_blockers = [
+        b for b in blocked_by
+        if isinstance(b, dict) and b.get("blocks") == "promotion_to_verified"
+    ]
+    if promotion_blockers and promotion.get("to") not in (
+        PromotionTarget.STAY_EXPLORATION.value,
+        PromotionTarget.REJECT.value,
+    ):
+        promotion["blocked_by"] = [b.get("id") for b in promotion_blockers if b.get("id")]
+        promotion["block_note"] = "; ".join(
+            b.get("description") or b.get("id") or "unknown" for b in promotion_blockers
+        )
+
     return MechanismMappingResult(
         status=status,
         dry_run=dry_run,
