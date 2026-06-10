@@ -1,190 +1,106 @@
-# TransformerLens
+# Biblical Correspondence Dictionary Vault
 
-<!-- Status Icons -->
-[![Pypi](https://img.shields.io/pypi/v/transformer-lens?color=blue)](https://pypi.org/project/transformer-lens/)
-![Pypi Total Downloads](https://img.shields.io/pepy/dt/transformer_lens?color=blue) ![PyPI -
-License](https://img.shields.io/pypi/l/transformer_lens?color=blue) [![Release
-CD](https://github.com/TransformerLensOrg/TransformerLens/actions/workflows/release.yml/badge.svg)](https://github.com/TransformerLensOrg/TransformerLens/actions/workflows/release.yml)
-[![Tests
-CD](https://github.com/TransformerLensOrg/TransformerLens/actions/workflows/checks.yml/badge.svg)](https://github.com/TransformerLensOrg/TransformerLens/actions/workflows/checks.yml)
-[![Docs
-CD](https://github.com/TransformerLensOrg/TransformerLens/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/TransformerLensOrg/TransformerLens/actions/workflows/pages/pages-build-deployment)
+## 目的
 
-A Library for Mechanistic Interpretability of Generative Language Models. Maintained by [Bryce Meyer](https://github.com/bryce13950) and created by [Neel Nanda](https://neelnanda.io/about)
+このVaultは **biblical-correspondence-dictionary**（聖書的照合辞典）のための研究・記録用Obsidian Vaultです。  
+聖書テキスト・原語（ヘブライ語・ギリシャ語）・スウェーデンボルグ解釈・フィールドノート・AI対話などの資料を蓄積し、
+対応・接続関係を段階的に検証・昇格させることを目的とします。
 
-[![Read the Docs
-Here](https://img.shields.io/badge/-Read%20the%20Docs%20Here-blue?style=for-the-badge&logo=Read-the-Docs&logoColor=white&link=https://TransformerLensOrg.github.io/TransformerLens/)](https://TransformerLensOrg.github.io/TransformerLens/)
+---
 
-This is a library for doing [mechanistic
-interpretability](https://distill.pub/2020/circuits/zoom-in/) of GPT-2 Style language models. The
-goal of mechanistic interpretability is to take a trained model and reverse engineer the algorithms
-the model learned during training from its weights.
+## フォルダ構造
 
-TransformerLens lets you load in 50+ different open source language models, and exposes the internal
-activations of the model to you. You can cache any internal activation in the model, and add in
-functions to edit, remove or replace these activations as the model runs.
-
-## Quick Start
-
-### Install
-
-```shell
-pip install transformer_lens
+```
+raw/                    # 未整理・一次資料
+  scripture/            # 聖書本文（章ごとのファイル）
+  strongs/              # ストロングス番号・原語語義ファイル
+  swedenborg/           # スウェーデンボルグ著作からの抜粋
+  field-notes/          # 現場観察・体験メモ（日付ファイル）
+  ai-dialogues/         # AI対話ログ（参照用。verified 昇格根拠には不可）
+  articles/             # 外部論文・記事
+wiki/
+  candidates/           # AI生成・未検証の接続候補
+  verified/
+    provisional/        # AI外部直接確認を1件以上通過した接続
+    confirmed/          # 複数条件通過・再検証済みの接続
+  concepts/             # 概念定義・用語集
+  ai-observation/       # AI観察メモ（補助資料）
+  queries/              # 調査・検索クエリのメモ
+schema/
+  Parallax.md           # 視差・多角的読みの補助スキーマ（スタブ）
+  ingest-rules.md       # raw/ への取り込みルール
+  adoption-gate.md      # 昇格条件の定義
+  lint-rules.md         # 構造監査ルール
+templates/
+  candidates-template.md
+  provisional-template.md
+  confirmed-template.md
 ```
 
-### Use
+---
 
-```python
-import transformer_lens
+## 昇格フロー
 
-# Load a model (eg GPT-2 Small)
-model = transformer_lens.HookedTransformer.from_pretrained("gpt2-small")
-
-# Run the model and get logits and activations
-logits, activations = model.run_with_cache("Hello World")
+```
+raw/ に資料追加
+    ↓
+wiki/candidates/  ← AI生成・未検証の接続候補を置く場所
+    ↓  【AI外部直接確認 1件以上が必須】
+wiki/verified/provisional/  ← 直接確認を通過した接続
+    ↓  【複数条件通過 + 再検証で矛盾なし】
+wiki/verified/confirmed/    ← 確定接続
 ```
 
-## Key Tutorials
+詳細な昇格条件は `schema/adoption-gate.md` を参照してください。
 
-* [Introduction to the Library and Mech
-  Interp](https://arena-chapter1-transformer-interp.streamlit.app/[1.2]_Intro_to_Mech_Interp)
-* [Demo of Main TransformerLens Features](https://neelnanda.io/transformer-lens-demo)
+---
 
-## Gallery
+## テンプレートの使い方
 
-Research done involving TransformerLens:
+| ステージ | 使用テンプレート |
+|---|---|
+| 新規候補追加 | `templates/candidates-template.md` |
+| provisional 昇格時 | `templates/provisional-template.md` |
+| confirmed 昇格時 | `templates/confirmed-template.md` |
 
-<!-- If you change this also change docs/source/content/gallery.md -->
-* [Progress Measures for Grokking via Mechanistic
-  Interpretability](https://arxiv.org/abs/2301.05217) (ICLR Spotlight, 2023) by Neel Nanda, Lawrence
-  Chan, Tom Lieberum, Jess Smith, Jacob Steinhardt
-* [Finding Neurons in a Haystack: Case Studies with Sparse
-  Probing](https://arxiv.org/abs/2305.01610) by Wes Gurnee, Neel Nanda, Matthew Pauly, Katherine
-  Harvey, Dmitrii Troitskii, Dimitris Bertsimas
-* [Towards Automated Circuit Discovery for Mechanistic
-  Interpretability](https://arxiv.org/abs/2304.14997) by Arthur Conmy, Augustine N. Mavor-Parker,
-  Aengus Lynch, Stefan Heimersheim, Adrià Garriga-Alonso
-* [Actually, Othello-GPT Has A Linear Emergent World Representation](https://neelnanda.io/othello)
-  by Neel Nanda
-* [A circuit for Python docstrings in a 4-layer attention-only
-  transformer](https://www.alignmentforum.org/posts/u6KXXmKFbXfWzoAXn/a-circuit-for-python-docstrings-in-a-4-layer-attention-only)
-  by Stefan Heimersheim and Jett Janiak
-* [A Toy Model of Universality](https://arxiv.org/abs/2302.03025) (ICML, 2023) by Bilal Chughtai,
-  Lawrence Chan, Neel Nanda
-* [N2G: A Scalable Approach for Quantifying Interpretable Neuron Representations in Large Language
-  Models](https://openreview.net/forum?id=ZB6bK6MTYq) (2023, ICLR Workshop RTML) by Alex Foote, Neel
-  Nanda, Esben Kran, Ioannis Konstas, Fazl Barez
-* [Eliciting Latent Predictions from Transformers with the Tuned
-  Lens](https://arxiv.org/abs/2303.08112) by Nora Belrose, Zach Furman, Logan Smith, Danny Halawi,
-  Igor Ostrovsky, Lev McKinney, Stella Biderman, Jacob Steinhardt
+---
 
-User contributed examples of the library being used in action:
+## 接続理由の類型
 
-* [Induction Heads Phase Change
-  Replication](https://colab.research.google.com/github/ckkissane/induction-heads-transformer-lens/blob/main/Induction_Heads_Phase_Change.ipynb):
-  A partial replication of [In-Context Learning and Induction
-  Heads](https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html)
-  from Connor Kissane
-* [Decision Transformer
-  Interpretability](https://github.com/jbloomAus/DecisionTransformerInterpretability): A set of
-  scripts for training decision transformers which uses transformer lens to view intermediate
-  activations, perform attribution and ablations. A write up of the initial work can be found
-  [here](https://www.lesswrong.com/posts/bBuBDJBYHt39Q5zZy/decision-transformer-interpretability).
+以下の8類型を全テンプレート・lintで共通使用します：
 
-Check out [our demos folder](https://github.com/TransformerLensOrg/TransformerLens/tree/main/demos) for
-more examples of TransformerLens in practice
+1. **原語由来** — ヘブライ語・ギリシャ語の語義・語根から導いた接続
+2. **本文文脈由来** — 聖書本文の文脈・構造から導いた接続
+3. **現場経験由来** — 観察・体験・実証から導いた接続
+4. **比喩・類似由来** — 類似・アナロジーから導いた接続
+5. **語感・形状由来** — 音韻・形状・印象から導いた接続
+6. **複数AI一致由来** — 複数のAIモデルが同意した接続（補助資料のみ）
+7. **解釈者由来** — スウェーデンボルグ等の解釈者に基づく接続（補助資料のみ）
+8. **AI対話由来** — AI対話ログから得た着想（補助資料のみ）
 
-## Getting Started in Mechanistic Interpretability
+> **注意**: 類型 6・7・8 は補助資料であり、`verified/` 昇格の直接根拠にはなりません。
 
-Mechanistic interpretability is a very young and small field, and there are a _lot_ of open
-problems. This means there's both a lot of low-hanging fruit, and that the bar for entry is low - if
-you would like to help, please try working on one! The standard answer to "why has no one done this
-yet" is just that there aren't enough people! Key resources:
+---
 
-* [A Guide to Getting Started in Mechanistic Interpretability](https://neelnanda.io/getting-started)
-* [ARENA Mechanistic Interpretability Tutorials](https://arena3-chapter1-transformer-interp.streamlit.app/) from
-  Callum McDougall. A comprehensive practical introduction to mech interp, written in
-  TransformerLens - full of snippets to copy and they come with exercises and solutions! Notable
-  tutorials:
-  * [Coding GPT-2 from
-    scratch](https://arena3-chapter1-transformer-interp.streamlit.app/[1.1]_Transformer_from_Scratch), with
-    accompanying video tutorial from me ([1](https://neelnanda.io/transformer-tutorial)
-    [2](https://neelnanda.io/transformer-tutorial-2)) - a good introduction to transformers
-  * [Introduction to Mech Interp and
-    TransformerLens](https://arena3-chapter1-transformer-interp.streamlit.app/[1.2]_Intro_to_Mech_Interp): An
-    introduction to TransformerLens and mech interp via studying induction heads. Covers the
-    foundational concepts of the library
-  * [Indirect Object
-    Identification](https://arena3-chapter1-transformer-interp.streamlit.app/[1.3]_Indirect_Object_Identification):
-    a replication of interpretability in the wild, that covers standard techniques in mech interp
-    such as [direct logit
-    attribution](https://dynalist.io/d/n2ZWtnoYHrU1s4vnFSAQ519J#z=disz2gTx-jooAcR0a5r8e7LZ),
-    [activation patching and path
-    patching](https://www.lesswrong.com/posts/xh85KbTFhbCz7taD4/how-to-think-about-activation-patching)
-* [Mech Interp Paper Reading List](https://neelnanda.io/paper-list)
-* [200 Concrete Open Problems in Mechanistic
-  Interpretability](https://neelnanda.io/concrete-open-problems)
-* [A Comprehensive Mechanistic Interpretability Explainer](https://neelnanda.io/glossary): To look
-  up all the jargon and unfamiliar terms you're going to come across!
-* [Neel Nanda's Youtube channel](https://www.youtube.com/channel/UCBMJ0D-omcRay8dh4QT0doQ): A range
-  of mech interp video content, including [paper
-  walkthroughs](https://www.youtube.com/watch?v=KV5gbOmHbjU&list=PL7m7hLIqA0hpsJYYhlt1WbHHgdfRLM2eY&index=1),
-  and [walkthroughs of doing
-  research](https://www.youtube.com/watch?v=yo4QvDn-vsU&list=PL7m7hLIqA0hr4dVOgjNwP2zjQGVHKeB7T)
+## First Run 自己点検チェックリスト
 
-## Support & Community
+セットアップ後、以下の3項目を確認してください。
 
-[![Contributing
-Guide](https://img.shields.io/badge/-Contributing%20Guide-blue?style=for-the-badge&logo=GitHub&logoColor=white)](https://TransformerLensOrg.github.io/TransformerLens/content/contributing.html)
+### 1. 配管確認
+- [ ] すべてのフォルダが作成されているか
+- [ ] README.md・schema 4ファイル・templates 3ファイルが存在するか
+- [ ] `.gitkeep` により空フォルダが git 管理されているか
 
-If you have issues, questions, feature requests or bug reports, please search the issues to check if
-it's already been answered, and if not please raise an issue!
+### 2. 門確認
+- [ ] `schema/adoption-gate.md` に candidates / provisional / confirmed の昇格条件が明確に分かれているか
+- [ ] **AI外部直接確認が provisional の必須条件**として明文化されているか
+- [ ] AI同意・AI確信度が昇格根拠にならないことが明記されているか
 
-You're also welcome to join the open source mech interp community on
-[Slack](https://join.slack.com/t/opensourcemechanistic/shared_invite/zt-2n26nfoh1-TzMHrzyW6HiOsmCESxXtyw).
-Please use issues for concrete discussions about the package, and Slack for higher bandwidth
-discussions about eg supporting important new use cases, or if you want to make substantial
-contributions to the library and want a maintainer's opinion. We'd also love for you to come and
-share your projects on the Slack!
+### 3. 歪み確認
+- [ ] `templates/provisional-template.md` に確認来歴欄が設けられているか
+- [ ] `schema/lint-rules.md` に raw 参照なし候補の検出ルールがあるか
+- [ ] lint では捕らえない判断（Swedenborg 発想を scripture 参照で偽装する件等）が人間の裁定に残ると明記されているか
 
-| :exclamation:  HookedSAETransformer Removed   |
-|-----------------------------------------------|
+---
 
-Hooked SAE has been removed from TransformerLens in version 2.0. The functionality is being moved to
-[SAELens](http://github.com/jbloomAus/SAELens). For more information on this release, please see the
-accompanying
-[announcement](https://transformerlensorg.github.io/TransformerLens/content/news/release-2.0.html)
-for details on what's new, and the future of TransformerLens.
-
-## Credits
-
-This library was created by **[Neel Nanda](https://neelnanda.io)** and is maintained by **[Bryce Meyer](https://github.com/bryce13950)**.
-
-The core features of TransformerLens were heavily inspired by the interface to [Anthropic's
-excellent Garcon tool](https://transformer-circuits.pub/2021/garcon/index.html). Credit to Nelson
-Elhage and Chris Olah for building Garcon and showing the value of good infrastructure for enabling
-exploratory research!
-
-### Creator's Note (Neel Nanda)
-
-I (Neel Nanda) used to work for the [Anthropic interpretability team](transformer-circuits.pub), and
-I wrote this library because after I left and tried doing independent research, I got extremely
-frustrated by the state of open source tooling. There's a lot of excellent infrastructure like
-HuggingFace and DeepSpeed to _use_ or _train_ models, but very little to dig into their internals
-and reverse engineer how they work. **This library tries to solve that**, and to make it easy to get
-into the field even if you don't work at an industry org with real infrastructure! One of the great
-things about mechanistic interpretability is that you don't need large models or tons of compute.
-There are lots of important open problems that can be solved with a small model in a Colab notebook!
-
-### Citation
-
-Please cite this library as:
-
-```BibTeX
-@misc{nanda2022transformerlens,
-    title = {TransformerLens},
-    author = {Neel Nanda and Joseph Bloom},
-    year = {2022},
-    howpublished = {\url{https://github.com/TransformerLensOrg/TransformerLens}},
-}
-```
+*このVaultは Obsidian で開いてご使用ください。Vaultルートはこのファイルと同じディレクトリです。*
