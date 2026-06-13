@@ -723,6 +723,13 @@
         body: JSON.stringify({ verse_text: text })
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      if (!response.body) {
+        throw new Error('Response body is empty');
+      }
+
       let readingEl = null;
       let fullReading = '';
       let carry = '';
