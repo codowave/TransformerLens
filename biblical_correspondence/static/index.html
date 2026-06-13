@@ -323,6 +323,104 @@
       font-family: inherit;
     }
     .suggestion-btn:active { background: var(--primary); color: white; }
+
+    /* 聖句パネル */
+    .verse-input-area {
+      padding: 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #verse-input {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      resize: none;
+      min-height: 80px;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      -webkit-appearance: none;
+    }
+    #verse-input:focus { border-color: var(--primary-light); }
+    #verse-btn {
+      align-self: flex-end;
+      background: var(--primary);
+      border: none;
+      border-radius: 22px;
+      color: white;
+      font-size: 14px;
+      padding: 10px 24px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    #verse-btn:disabled { background: #aaa; }
+    #verse-btn:active { background: var(--primary-light); }
+    .verse-output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .word-cards-label, .verse-reading-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .word-cards {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .word-cards::-webkit-scrollbar { height: 4px; }
+    .word-cards::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .word-card {
+      flex-shrink: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      width: 180px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .word-card-word { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+    .word-card-spiritual { font-size: 12px; color: var(--text); line-height: 1.5; margin-bottom: 4px; }
+    .word-card-shift {
+      font-size: 11px; color: #666;
+      padding: 4px 6px;
+      background: #f0ede0;
+      border-left: 2px solid var(--accent);
+      border-radius: 0 4px 4px 0;
+      margin-bottom: 4px;
+      line-height: 1.5;
+    }
+    .word-card-ref { font-size: 10px; color: var(--text-muted); text-align: right; }
+    .verse-reading {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 15px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 60px;
+      color: var(--text);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
   </style>
 </head>
 <body>
@@ -338,6 +436,7 @@
 <div class="tabs">
   <div class="tab active" onclick="switchTab('chat')">💬 対話</div>
   <div class="tab" onclick="switchTab('dict')">📖 辞典</div>
+  <div class="tab" onclick="switchTab('verse')">📜 聖句</div>
 </div>
 
 <!-- チャットパネル -->
@@ -363,6 +462,19 @@
   </div>
 </div>
 
+<!-- 聖句パネル -->
+<div id="verse-panel" class="panel">
+  <div class="verse-input-area">
+    <textarea id="verse-input" placeholder="聖句テキストを入力…&#10;例：主は私の羊飼い、私は乏しいことがない。（詩篇23:1）" rows="4"></textarea>
+    <button id="verse-btn" onclick="readVerse()">📜 読解する</button>
+  </div>
+  <div class="verse-output" id="verse-output">
+    <div style="text-align:center;color:var(--text-muted);padding:40px 20px;font-size:14px;">
+      聖句を入力して「読解する」ボタンを押してください
+    </div>
+  </div>
+</div>
+
 <!-- 辞典パネル -->
 <div id="dict-panel" class="panel">
   <div class="dict-search">
@@ -379,12 +491,14 @@
   let allEntries = [];
 
   // タブ切り替え
+  const TAB_NAMES = ['chat', 'dict', 'verse'];
   function switchTab(tab) {
     document.querySelectorAll('.tab').forEach((t, i) => {
-      t.classList.toggle('active', (i === 0 && tab === 'chat') || (i === 1 && tab === 'dict'));
+      t.classList.toggle('active', tab === TAB_NAMES[i]);
     });
     document.getElementById('chat-panel').classList.toggle('active', tab === 'chat');
     document.getElementById('dict-panel').classList.toggle('active', tab === 'dict');
+    document.getElementById('verse-panel').classList.toggle('active', tab === 'verse');
     if (tab === 'dict' && allEntries.length === 0) loadDictionary();
   }
 
@@ -584,6 +698,105 @@
     const input = document.getElementById('user-input');
     input.value = `「${word}」の相応についてもっと詳しく教えてください`;
     input.focus();
+  }
+
+  // 聖句読解
+  let isVerseStreaming = false;
+
+  async function readVerse() {
+    if (isVerseStreaming) return;
+    const input = document.getElementById('verse-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    isVerseStreaming = true;
+    const btn = document.getElementById('verse-btn');
+    btn.disabled = true;
+
+    const output = document.getElementById('verse-output');
+    output.innerHTML = '<div style="text-align:center;padding:20px;"><div class="typing-indicator" style="display:inline-flex;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+
+    try {
+      const response = await fetch('/api/verse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verse_text: text })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      if (!response.body) {
+        throw new Error('Response body is empty');
+      }
+
+      let readingEl = null;
+      let fullReading = '';
+      let carry = '';
+      let initialized = false;
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        carry += decoder.decode(value, { stream: true });
+        const parts = carry.split('\n\n');
+        carry = parts.pop();
+        for (const part of parts) {
+          for (const line of part.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6);
+            if (data === '[DONE]') break;
+            try {
+              const msg = JSON.parse(data);
+              if (msg.type === 'words') {
+                if (!initialized) { output.innerHTML = ''; initialized = true; }
+                const wordsSection = document.createElement('div');
+                if (msg.words.length > 0) {
+                  wordsSection.innerHTML = '<div class="word-cards-label">📌 抽出された辞典語</div>';
+                  const cardsRow = document.createElement('div');
+                  cardsRow.className = 'word-cards';
+                  msg.words.forEach(w => {
+                    const card = document.createElement('div');
+                    card.className = 'word-card';
+                    card.innerHTML = `
+                      <div class="word-card-word">${escapeHtml(w.word)}</div>
+                      <div class="word-card-spiritual">${escapeHtml(w.spiritual)}</div>
+                      <div class="word-card-shift">💡 ${escapeHtml(w.value_shift)}</div>
+                      <div class="word-card-ref">📚 ${escapeHtml(w.reference)}</div>
+                    `;
+                    cardsRow.appendChild(card);
+                  });
+                  wordsSection.appendChild(cardsRow);
+                } else {
+                  wordsSection.innerHTML = '<div class="word-cards-label" style="color:#999">辞典登録語は検出されませんでした</div>';
+                }
+                output.appendChild(wordsSection);
+                const readingSection = document.createElement('div');
+                readingSection.innerHTML = '<div class="verse-reading-label">✦ 相応的読解</div>';
+                readingEl = document.createElement('div');
+                readingEl.className = 'verse-reading';
+                readingSection.appendChild(readingEl);
+                output.appendChild(readingSection);
+              } else if (msg.type === 'text') {
+                fullReading += msg.text;
+                if (readingEl) {
+                  readingEl.textContent = fullReading;
+                  output.scrollTop = output.scrollHeight;
+                }
+              }
+            } catch(e) { console.error('SSE parse error:', e, data); }
+          }
+        }
+      }
+    } catch (err) {
+      output.innerHTML = '<p style="padding:20px;color:#c00">エラーが発生しました。再度お試しください。</p>';
+    }
+
+    isVerseStreaming = false;
+    btn.disabled = false;
   }
 </script>
 </body>
