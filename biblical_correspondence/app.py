@@ -284,6 +284,10 @@ class ChatRequest(BaseModel):
     history: list[dict] = []
 
 
+class VerseRequest(BaseModel):
+    verse_text: str
+
+
 async def stream_response(request: ChatRequest):
     """Claude API からストリーミングレスポンスを生成"""
     messages = request.history.copy()
@@ -322,6 +326,67 @@ async def stream_response(request: ChatRequest):
                     # SSE 形式で送信
                     yield f"data: {json.dumps({'text': event.delta.text}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
+
+
+VERSE_SYSTEM = """あなたはスウェーデンボルグの相応の原理に精通した霊的案内人です。
+ユーザーが入力した聖句の霊的読解を日本語で行ってください。
+
+この聖句に含まれる語の相応を辞典から参照し、字義→内意→価値変換の順で全体の霊的読解を日本語で生成してください。
+典拠（AC/HH/DLW/AE番号）を引用し、最後に価値変換の圧縮一行を出してください。"""
+
+
+async def stream_verse_response(request: VerseRequest):
+    verse_text = request.verse_text
+
+    matched_entries = [
+        e for e in DICTIONARY["entries"]
+        if e.get("word") and e["word"] in verse_text
+    ]
+
+    words_data = [
+        {
+            "word": e["word"],
+            "spiritual": e.get("spiritual", ""),
+            "value_shift": e.get("value_shift", ""),
+            "reference": e.get("reference", ""),
+            "category": e.get("category", ""),
+        }
+        for e in matched_entries
+    ]
+    yield f"data: {json.dumps({'type': 'words', 'words': words_data}, ensure_ascii=False)}\n\n"
+
+    if matched_entries:
+        dict_context = "\n".join(
+            f"◆ {e['word']}: 霊的内意={e.get('spiritual','')}, 価値変換={e.get('value_shift','')}, 典拠={e.get('reference','')}"
+            for e in matched_entries
+        )
+        system_text = f"{VERSE_SYSTEM}\n\n【該当する辞典データ】\n{dict_context}"
+    else:
+        system_text = f"{VERSE_SYSTEM}\n\n（この聖句に辞典登録語は見つかりませんでしたが、相応の原理に従い読解してください）"
+
+    messages = [{"role": "user", "content": f"聖句：\n{verse_text}"}]
+
+    async with client_ai.messages.stream(
+        model="claude-opus-4-6",
+        max_tokens=2048,
+        thinking={"type": "adaptive"},
+        system=[{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}],
+        messages=messages,
+    ) as stream:
+        async for event in stream:
+            if event.type == "content_block_delta":
+                if event.delta.type == "text_delta":
+                    yield f"data: {json.dumps({'type': 'text', 'text': event.delta.text}, ensure_ascii=False)}\n\n"
+    yield "data: [DONE]\n\n"
+
+
+@app.post("/api/verse")
+async def verse(request: VerseRequest):
+    return StreamingResponse(
+        stream_verse_response(request),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/api/chat")
