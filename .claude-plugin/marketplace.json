@@ -1,0 +1,20 @@
+{
+  "name": "transformerlens-plugins",
+  "owner": {
+    "name": "codowave"
+  },
+  "description": "Claude Code plugins developed inside the TransformerLens fork",
+  "plugins": [
+    {
+      "name": "plugin-audit",
+      "source": "./plugins/plugin-audit",
+      "description": "Audits Claude Code plugins (manifest, skills, commands, agents, hooks) for structural validity, name collisions, and dangling references",
+      "version": "0.1.0",
+      "author": {
+        "name": "codowave"
+      },
+      "category": "developer-tools",
+      "keywords": ["plugin-dev", "audit", "validation"]
+    }
+  ]
+}
