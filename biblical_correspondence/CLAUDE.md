@@ -27,7 +27,12 @@ cd biblical_correspondence && pytest tests/test_lexicon_health.py -v
 
 **この節は要約であり、規約の正はコードとテストにある。** 実装を変更した際にこの節が古くなっていたら、テストの方を書き換えて要約に合わせるのではなく、この節をコードに合わせて直すこと。
 
-原語照合（`verify_verse`）・相応索引検索（`lookup_correspondence`）・`/api/lexicon/health` を含む、このディレクトリの全ての照合系エンドポイントは**二状態ではなく三状態**を区別する：
+この三状態は次の2つの関数の契約であり、このディレクトリの全エンドポイントに一般化できる規約ではない：`verify_verse`（原語照合）と `lookup_correspondence`（相応索引検索）。
+
+- `/api/lexicon/health` は別の契約を持つ——`morphhb`/`morphgnt` は `available`/`missing`、`verify_verse_status` は `operational`/`degraded` を返す（`TestHealthEndpoint` が固定）。
+- `lookup_word`（Strong's 辞書引き）も別の契約——見つかればエントリの dict、無ければ `KeyError` を送出する（`TestLookupWord.test_unknown_id_raises_keyerror` が固定）。
+
+これらを三状態規約に合わせて「直す」と、上記の固定テストと矛盾する。三状態は `verify_verse` と `lookup_correspondence` の2関数に限定して適用すること：
 
 | status | 意味 |
 |---|---|

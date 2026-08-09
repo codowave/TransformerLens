@@ -10,6 +10,7 @@ This repo hosts two independent projects that happen to share one git history. T
 |---|---|---|
 | `transformer_lens/` | `transformer_lens/CLAUDE.md` | vendored upstream [TransformerLens](https://github.com/TransformerLensOrg/TransformerLens) — mechanistic-interpretability toolkit for GPT-2-style models |
 | `research_os/` | `research_os/CLAUDE.md` | hypothesis-verification CLI that runs checks against `research/hypotheses/*.md` |
+| `research/` | `research/CLAUDE.md` | the hypothesis files themselves (`research/hypotheses/*.md`) |
 | `biblical_correspondence/` | `biblical_correspondence/CLAUDE.md` | Japanese-language FastAPI app + lookup layer that `research_os` verifies claims against |
 
 `easy_transformer/` is a deprecated shim package — importing it just logs a warning and re-exports `transformer_lens`. Don't add new code there.

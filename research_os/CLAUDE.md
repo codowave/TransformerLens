@@ -2,7 +2,7 @@
 
 このディレクトリで作業する際のガイド。See the repo-root `CLAUDE.md` for how this fits alongside the vendored `transformer_lens/` library, which this file does not cover.
 
-コードコメント・docstring・このファイル自体を含め、`research_os/`（および `research/`）配下は日本語で書く。`transformer_lens/` にはこの規約は適用されない。
+コードコメント・docstring・このファイル自体を含め、`research_os/` 配下は日本語で書く（`research/` は兄弟ディレクトリで、この規約は `research/CLAUDE.md` に別途書かれている——このファイルはそちらを継承しない）。`transformer_lens/` にはこの規約は適用されない。
 
 ## What this is
 
