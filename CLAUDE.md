@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-The owner, how requests arrive, and the hard rules every AI agent must follow (no merging, `verified: true` only from human source-checking, don't route around the `textual_comparison` verdict rules, the repo is public) live in `AGENTS.md`, shared with non-Claude agents:
+The owner, how requests arrive, and the hard rules every AI agent must follow (PRs only on the owner's explicit request, no merging, `verified: true` only from human source-checking, don't route around the `textual_comparison` verdict rules, the repo is public) live in `AGENTS.md`, shared with non-Claude agents:
 
 @AGENTS.md
 
