@@ -5,16 +5,25 @@ mode="falsification":
   「この対応を支持する記述探し」ではなく
   「この対応を壊す記述・非対称性・階層差を探す」。
 
-  探索の順序:
-  1. focus_fp に関連するキーワードを correspondence_index から抽出
-  2. 各エントリを falsification 観点でスキャン
-     — 対応論が「確率的・量的・水平的」な処理を明示的に否定しているか
-     — 対応の階層性・一方向性・非還元性を強調する記述があるか
-  3. スキャン結果を verdict に分類:
-       challenges  — 仮説の主張を直接脅かす記述
-       neutral     — 関連するが脅かさない
-       irrelevant  — 関係なし
-  4. 総合判定: falsified / inconclusive / survives
+  判定の二段構え（2026-10-31 改訂）:
+  1. 候補（lead）— キーワード一致は「読むべき項目」を挙げるだけ。判定には使わない。
+     influx / love / will / light 等はスウェーデンボルグの基本語彙そのものなので、
+     一致数は「反証の強さ」ではなく「スウェーデンボルグらしさ」を測ってしまう。
+  2. 反証（challenge）— 索引エントリに人が付けた注記
+     falsification_relevance == focus_fp かつ falsification_direction == "challenges"
+     のものだけを反証項目として扱う。さらに verified の三状態で分ける:
+       verified: true   → 原典照合済み（confirmed）
+       verified: false  → 未照合と明示（unverified）
+       verified: なし   → 照合状態不明（unknown）。true と同一視しない
+
+  総合判定:
+    falsified    — 原典照合済みの反証項目が1件以上ある（反例は1件で足りる）
+    inconclusive — 反証項目はあるが照合済みでない／索引が薄く不在を言えない
+    survives     — 反証項目なし、かつ索引が一定以上（非存在の主張ではない）
+
+  判定は件数の閾値に依存しない。索引を拡充しても、照合済みの反証項目が
+  増えない限り判定は動かない（旧実装は「challenges ≥ 3」の絶対数で
+  falsified を返したため、索引を増やすほど中身と無関係に反証へ寄った）。
 
 mode="support" は探索燃料としては有効だが検証本筋では使わない。
 """
@@ -32,11 +41,17 @@ log = logging.getLogger(__name__)
 
 _INDEX_PATH = Path(__file__).parent.parent.parent / "biblical_correspondence" / "correspondence" / "correspondence_index.json"
 
+# 不在（survives）を言うのに最低限必要な索引の件数。反証（falsified）には使わない。
+MIN_ENTRIES_FOR_ABSENCE = 20
+
 
 class TCVerdict(str, Enum):
-    FALSIFIED    = "falsified"    # テキストが仮説の中核主張を否定する
-    INCONCLUSIVE = "inconclusive" # 脅かすが決定的でない
+    FALSIFIED    = "falsified"    # 原典照合済みの記述が仮説の中核主張を否定する
+    INCONCLUSIVE = "inconclusive" # 脅かす候補はあるが照合済みでない／索引が薄い
     SURVIVES     = "survives"     # 反証見つからず（非存在の主張ではない）
+
+
+VerifiedState = Literal["confirmed", "unverified", "unknown"]
 
 
 @dataclasses.dataclass
@@ -45,8 +60,9 @@ class EntryAnalysis:
     work_section: str
     text_excerpt: str
     keywords:     list[str]
-    classification: Literal["challenges", "neutral", "irrelevant"]
+    classification: Literal["challenges", "lead", "irrelevant"]
     challenge_reason: str = ""
+    verified_state: VerifiedState = "unknown"
 
 
 @dataclasses.dataclass
@@ -58,13 +74,17 @@ class TextualComparisonResult:
     index_coverage: dict  # {entry_count, works_indexed, coverage_note}
     search_terms:   list[str]
 
-    challenges:  list[EntryAnalysis]
-    neutral:     list[EntryAnalysis]
+    challenges:  list[EntryAnalysis]   # 人の注記で反証方向とされた項目（照合状態つき）
+    leads:       list[EntryAnalysis]   # キーワード一致のみ。読むべき候補で、判定に使わない
 
     verdict:     TCVerdict
     verdict_rationale: str
 
     epistemic_note: str  # インデックス未整備の場合の unavailable 注記
+
+    @property
+    def confirmed_challenges(self) -> list[EntryAnalysis]:
+        return [a for a in self.challenges if a.verified_state == "confirmed"]
 
     def to_dict(self) -> dict:
         return {
@@ -74,7 +94,7 @@ class TextualComparisonResult:
             "index_coverage": self.index_coverage,
             "search_terms": self.search_terms,
             "challenges": [dataclasses.asdict(e) for e in self.challenges],
-            "neutral": [dataclasses.asdict(e) for e in self.neutral],
+            "leads": [dataclasses.asdict(e) for e in self.leads],
             "verdict": self.verdict.value,
             "verdict_rationale": self.verdict_rationale,
             "epistemic_note": self.epistemic_note,
@@ -100,8 +120,8 @@ FP2_SEARCH_TERMS = [
     "heat", "light", "correspondence", "mediation",
 ]
 
+# 読むべき候補（lead）を挙げるための語。判定には使わない。
 FP2_CHALLENGE_KEYWORDS = {
-    # これらのキーワードが「量的でない」「秩序的」「構造的」な文脈で使われると challenges
     "influx": "流入の秩序性・構造性は softmax の確率的正規化と質的に異なる可能性",
     "order": "対応の秩序は量的グラデーションではなく質的階層",
     "reception": "受容は確率的重み付けではなく器の質による",
@@ -121,29 +141,49 @@ def _load_index() -> dict:
         return json.load(f)
 
 
-def _classify_entry_fp2(entry: dict, mode: str) -> EntryAnalysis:
-    """fp-2 falsification の観点でエントリを分類する。"""
+def _verified_state(entry: dict) -> VerifiedState:
+    """verified の三状態。キーがない・null を true と同一視しない。"""
+    v = entry.get("verified")
+    if v is True:
+        return "confirmed"
+    if v is False:
+        return "unverified"
+    return "unknown"
+
+
+def _is_annotated_challenge(entry: dict, focus_fp: str) -> bool:
+    return (
+        entry.get("falsification_relevance") == focus_fp
+        and entry.get("falsification_direction") == "challenges"
+    )
+
+
+def _classify_entry_fp2(entry: dict, mode: str, focus_fp: str = "fp-2") -> EntryAnalysis:
+    """fp-2 falsification の観点でエントリを分類する。
+
+    challenges — 人の注記で反証方向とされた項目
+    lead       — 注記はないがキーワードに一致した項目（読む候補）
+    irrelevant — どちらでもない
+    """
     text     = entry.get("text", "").lower()
     keywords = [k.lower() for k in entry.get("keywords", [])]
     all_text = text + " " + " ".join(keywords)
 
-    # challenge キーワードが本文に含まれるか
-    hit_reasons: list[str] = []
-    for kw, reason in FP2_CHALLENGE_KEYWORDS.items():
-        if kw in all_text:
-            hit_reasons.append(f"[{kw}] {reason}")
+    hit_reasons = [
+        f"[{kw}] {reason}"
+        for kw, reason in FP2_CHALLENGE_KEYWORDS.items()
+        if kw in all_text
+    ]
 
-    if not hit_reasons:
-        classification  = "irrelevant"
-        challenge_reason = ""
-    elif len(hit_reasons) >= 2:
-        # 複数の challenge キーワードが当たる = より強い challenges 候補
+    if _is_annotated_challenge(entry, focus_fp):
         classification   = "challenges"
+        challenge_reason = entry.get("note", "") or "; ".join(hit_reasons[:3])
+    elif hit_reasons:
+        classification   = "lead"
         challenge_reason = "; ".join(hit_reasons[:3])
     else:
-        # 1件 = neutral（判断保留）
-        classification   = "neutral"
-        challenge_reason = hit_reasons[0]
+        classification   = "irrelevant"
+        challenge_reason = ""
 
     excerpt = entry.get("text", "")[:200] + ("..." if len(entry.get("text", "")) > 200 else "")
 
@@ -154,51 +194,54 @@ def _classify_entry_fp2(entry: dict, mode: str) -> EntryAnalysis:
         keywords=entry.get("keywords", []),
         classification=classification,
         challenge_reason=challenge_reason,
+        verified_state=_verified_state(entry),
     )
 
 
 def _make_verdict(
     challenges: list[EntryAnalysis],
-    neutral:    list[EntryAnalysis],
+    leads:      list[EntryAnalysis],
     coverage:   dict,
     focus_fp:   str,
 ) -> tuple[TCVerdict, str]:
-    """falsification 判定を返す。"""
-    n_challenges = len(challenges)
-    n_neutral    = len(neutral)
-    entry_count  = coverage.get("entry_count", 0)
+    """falsification 判定を返す。件数の閾値には依存しない。"""
+    confirmed   = [a for a in challenges if a.verified_state == "confirmed"]
+    unconfirmed = [a for a in challenges if a.verified_state != "confirmed"]
+    entry_count = coverage.get("entry_count", 0)
 
-    if entry_count < 20:
-        # インデックスが薄すぎて falsification の根拠として不十分
+    if confirmed:
+        ids = ", ".join(a.entry_id for a in confirmed)
+        return (
+            TCVerdict.FALSIFIED,
+            f"原典照合済みの反証項目 {len(confirmed)} 件（{ids}）。"
+            f"これらが {focus_fp} の中核主張を否定するという注記に基づく。"
+            "反例は1件で足りるため、件数や索引の大きさには依存しない。"
+        )
+
+    if unconfirmed:
+        detail = ", ".join(f"{a.entry_id}({a.verified_state})" for a in unconfirmed)
+        return (
+            TCVerdict.INCONCLUSIVE,
+            f"反証方向の注記がある項目 {len(unconfirmed)} 件はいずれも原典未照合"
+            f"（{detail}）。原典（AC/HH/DLW）で照合し verified: true に"
+            "昇格するまで falsified とは判定しない。"
+            f"キーワード一致の候補 {len(leads)} 件は判定に使っていない。"
+        )
+
+    if entry_count < MIN_ENTRIES_FOR_ABSENCE:
         return (
             TCVerdict.INCONCLUSIVE,
             f"インデックスのエントリ数が {entry_count} 件と少なく、"
-            "反証検索の網羅性が低い。"
-            f"challenges={n_challenges}, neutral={n_neutral} だが、"
+            "反証の不在を言える網羅性がない。"
             "これは「反証がない」ではなく「探せていない」。"
-            "correspondence_index を拡充（PR #9 相当）してから再実行すること。"
         )
 
-    if n_challenges == 0:
-        return (
-            TCVerdict.SURVIVES,
-            f"インデックス {entry_count} 件中 {focus_fp} を直接脅かすエントリなし。"
-            "ただし survives ≠ 支持確認。索引が薄い可能性は常にある。"
-        )
-    elif n_challenges <= 2:
-        return (
-            TCVerdict.INCONCLUSIVE,
-            f"{n_challenges} 件の challenges エントリ。決定的ではないが要精査。"
-            "challenges エントリの原典（AC/HH/DLW）を直接確認し、"
-            "文脈が fp-2 の破綻を示すか判断すること。"
-        )
-    else:
-        return (
-            TCVerdict.FALSIFIED,
-            f"{n_challenges} 件の challenges エントリ。"
-            "対応論が量的正規化と質的に異なる構造を持つことが複数箇所で示唆される。"
-            "fp-2 は confirmed failure point として hyp-001 を stay_candidate に戻す必要がある。"
-        )
+    return (
+        TCVerdict.SURVIVES,
+        f"インデックス {entry_count} 件中、{focus_fp} への反証注記を持つ項目なし。"
+        "ただし survives ≠ 支持確認。索引が薄い可能性は常にある。"
+        f"キーワード一致の候補 {len(leads)} 件は未読なら読む価値がある。"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -246,17 +289,18 @@ def run(
         "coverage_note": index_data.get("coverage_note", ""),
     }
 
-    # 全エントリを fp-2 falsification 観点で分類
-    analyses = [_classify_entry_fp2(e, mode) for e in entries]
+    analyses = [_classify_entry_fp2(e, mode, focus_fp) for e in entries]
 
     challenges = [a for a in analyses if a.classification == "challenges"]
-    neutral    = [a for a in analyses if a.classification == "neutral"]
+    leads      = [a for a in analyses if a.classification == "lead"]
 
-    verdict, rationale = _make_verdict(challenges, neutral, coverage, focus_fp)
+    verdict, rationale = _make_verdict(challenges, leads, coverage, focus_fp)
 
     epistemic_note = (
         "このスキャンは correspondence_index.json（現在 {} 件）のみを対象とする。\n"
         "インデックス外の AC/HH/DLW 記述は照合されていない。\n"
+        "反証判定は人が付けた反証注記と verified の状態だけに基づき、\n"
+        "キーワード一致（leads）は読む候補の提示に留める。\n"
         "'survives' は「索引の範囲内で反証が見つからなかった」であり、\n"
         "「スウェーデンボルグが softmax アナロジーを否定していない」ではない。"
     ).format(len(entries))
@@ -268,7 +312,7 @@ def run(
         index_coverage=coverage,
         search_terms=FP2_SEARCH_TERMS,
         challenges=challenges,
-        neutral=neutral,
+        leads=leads,
         verdict=verdict,
         verdict_rationale=rationale,
         epistemic_note=epistemic_note,
