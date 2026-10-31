@@ -1,0 +1,3 @@
+## 2023-11-01 - Avoid manual broadcasting for tensor contractions
+**Learning:** In `abstract_attention.py`, computing the attention output result explicitly via `(z * w).sum(-2)` where `z` and `w` have singleton dimensions added creates a massive intermediate 5D tensor of shape `[batch, pos, head_index, d_head, d_model]`. For large models, this creates OOM errors and wastes significant compute bandwidth compared to batched matrix multiplication.
+**Action:** Use `torch.einsum` (e.g., `torch.einsum("b p h d, h d m -> b p h m", z, W_O)`) for tensor contractions over specific dimensions instead of manual `einops.rearrange` broadcasting followed by multiplication and summation.
