@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+The owner, how requests arrive, and the hard rules every AI agent must follow (no merging, `verified: true` only from human source-checking, don't route around the `textual_comparison` verdict rules, the repo is public) live in `AGENTS.md`, shared with non-Claude agents:
+
+@AGENTS.md
+
 ## Repository overview
 
 This repo hosts two independent projects that happen to share one git history. Their tooling, languages, and conventions do not overlap — figure out which one a task belongs to before doing anything else, then read **that project's own CLAUDE.md** (each subdirectory's CLAUDE.md loads automatically once you're working inside it; don't assume this root file alone gives you everything).
