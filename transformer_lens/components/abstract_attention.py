@@ -447,13 +447,8 @@ class AbstractAttention(ABC, nn.Module):
         q: Float[torch.Tensor, "batch query_pos head_index d_head"],
         k: Float[torch.Tensor, "batch key_pos head_index d_head"],
     ) -> Float[torch.Tensor, "batch head_index query_pos key_pos"]:
-        q_ = einops.rearrange(
-            q, "batch query_pos head_index d_head -> batch head_index query_pos d_head"
-        )
-        k_ = einops.rearrange(
-            k, "batch key_pos head_index d_head -> batch head_index d_head key_pos"
-        )
-        attn_scores = q_ @ k_ / self.attn_scale
+        # Optimization: use torch.einsum instead of rearrange and @ to avoid large intermediate tensors
+        attn_scores = torch.einsum("bqhd,bkhd->bhqk", q, k) / self.attn_scale
         if self.cfg.attn_scores_soft_cap > 0:
             attn_scores = self.cfg.attn_scores_soft_cap * F.tanh(
                 attn_scores / self.cfg.attn_scores_soft_cap
@@ -465,19 +460,8 @@ class AbstractAttention(ABC, nn.Module):
         v: Float[torch.Tensor, "batch key_pos head_index d_head"],
         pattern: Float[torch.Tensor, "batch head_index query_pos key_pos"],
     ) -> Float[torch.Tensor, "batch query_pos head_index d_head"]:
-        v_ = einops.rearrange(
-            v, "batch key_pos head_index d_head -> batch head_index key_pos d_head"
-        )
-        pattern_ = einops.rearrange(
-            pattern,
-            "batch head_index query_pos key_pos -> batch head_index query_pos key_pos",
-        )
-        z = self.hook_z(
-            einops.rearrange(
-                pattern_ @ v_,
-                "batch head_index query_pos d_head -> batch query_pos head_index d_head",
-            )
-        )
+        # Optimization: use torch.einsum instead of rearrange and @ to avoid large intermediate tensors
+        z = self.hook_z(torch.einsum("bhqk,bkhd->bqhd", pattern, v))
         return z
 
     def apply_causal_mask(
