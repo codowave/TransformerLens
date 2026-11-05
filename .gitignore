@@ -26,3 +26,4 @@ docs/source/generated
 biblical_correspondence/data/morphhb/
 biblical_correspondence/data/sblgnt/
 biblical_correspondence/data/morphgnt/
+venv_torch/
