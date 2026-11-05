@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "codex-plugin-dev",
+  "displayName": "Codex Plugin Dev",
+  "version": "0.1.0",
+  "description": "Create, update, repair, and audit OpenAI Codex CLI extensions (skills, legacy custom prompts, MCP servers, hooks)",
+  "author": {
+    "name": "codowave"
+  },
+  "keywords": ["codex", "openai-codex", "plugin-dev", "audit", "skills"]
+}

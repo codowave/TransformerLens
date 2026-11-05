@@ -1,0 +1,31 @@
+{
+  "name": "transformerlens-plugins",
+  "owner": {
+    "name": "codowave"
+  },
+  "description": "Claude Code plugins developed inside the TransformerLens fork",
+  "plugins": [
+    {
+      "name": "plugin-audit",
+      "source": "./plugins/plugin-audit",
+      "description": "Audits Claude Code plugins (manifest, skills, commands, agents, hooks) for structural validity, name collisions, and dangling references",
+      "version": "0.1.0",
+      "author": {
+        "name": "codowave"
+      },
+      "category": "developer-tools",
+      "keywords": ["plugin-dev", "audit", "validation"]
+    },
+    {
+      "name": "codex-plugin-dev",
+      "source": "./plugins/codex-plugin-dev",
+      "description": "Create, update, repair, and audit OpenAI Codex CLI extensions (skills, legacy custom prompts, MCP servers, hooks)",
+      "version": "0.1.0",
+      "author": {
+        "name": "codowave"
+      },
+      "category": "developer-tools",
+      "keywords": ["codex", "openai-codex", "plugin-dev", "audit", "skills"]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "plugin-audit",
+  "displayName": "Plugin Audit",
+  "version": "0.1.0",
+  "description": "Audits Claude Code plugins (manifest, skills, commands, agents, hooks) for structural validity, name collisions, and dangling references",
+  "author": {
+    "name": "codowave"
+  },
+  "keywords": ["plugin-dev", "audit", "validation", "quality"]
+}
