@@ -317,17 +317,13 @@ class AbstractAttention(ABC, nn.Module):
                     )
                 )
             else:
-                # Add singleton dimensions to make shapes compatible for broadcasting:
-                w = einops.rearrange(
-                    self.W_O,
-                    "head_index d_head d_model -> 1 1 head_index d_head d_model",
-                )
-                z = einops.rearrange(
-                    z, "batch pos head_index d_head -> batch pos head_index d_head 1"
-                )
-
                 # Multiply the z tensor by the W_O tensor, summing over the d_head dimension
-                unhooked_result = (z * w).sum(-2)
+                # Using einsum is faster and avoids creating a massive broadcasted tensor
+                unhooked_result = einops.einsum(
+                    z,
+                    self.W_O,
+                    "batch pos head_index d_head, head_index d_head d_model -> batch pos head_index d_model",
+                )
 
                 result = self.hook_result(unhooked_result)  # [batch, pos, head_index, d_model]
             out = (
