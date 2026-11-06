@@ -1,0 +1,3 @@
+## 2024-05-18 - [Avoid Modifying Explicit Parity Functions in Interpretability]
+**Learning:** In mechanistic interpretability libraries (like TransformerLens), custom activation implementations like `gelu_new` and `gelu_fast` exist explicitly to maintain exact mathematical/rounding parity with specific models (e.g., GPT-2). Replacing them with native fused operations like `F.gelu(..., approximate="tanh")` sacrifices model fidelity, leading to blocked PRs.
+**Action:** Never optimize activation functions or numerical approximations that are intentionally non-standard to match original model quirks. Focus performance optimizations on structural improvements (like `einops.einsum` vs manual broadcasting).
