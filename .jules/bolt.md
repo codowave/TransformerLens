@@ -1,0 +1,3 @@
+## 2024-06-12 - [Massive memory allocation during manual broadcasting in Attention]
+**Learning:** `einops.rearrange` with element-wise multiplication causes massive intermediate tensors due to manual broadcasting, leading to slow performance or Out-Of-Memory (OOM) errors. Specifically, `z` and `w` matrices in `abstract_attention.py` expand to shape `(batch, pos, head_index, d_head, d_model)` which can consume tens of GBs of memory.
+**Action:** Use `einops.einsum` or `torch.matmul` instead of `einops.rearrange` with element-wise multiplication followed by `.sum()` to let PyTorch optimize the tensor contraction natively without allocating the intermediate broadcasted tensor.

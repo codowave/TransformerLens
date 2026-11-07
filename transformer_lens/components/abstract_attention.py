@@ -317,17 +317,14 @@ class AbstractAttention(ABC, nn.Module):
                     )
                 )
             else:
-                # Add singleton dimensions to make shapes compatible for broadcasting:
-                w = einops.rearrange(
+                # ⚡ Bolt Optimization: Use einops.einsum instead of einops.rearrange + multiply + sum
+                # This prevents massive memory allocation from manual broadcasting which causes OOMs
+                # and is significantly faster.
+                unhooked_result = einops.einsum(
+                    z,
                     self.W_O,
-                    "head_index d_head d_model -> 1 1 head_index d_head d_model",
+                    "batch pos head_index d_head, head_index d_head d_model -> batch pos head_index d_model",
                 )
-                z = einops.rearrange(
-                    z, "batch pos head_index d_head -> batch pos head_index d_head 1"
-                )
-
-                # Multiply the z tensor by the W_O tensor, summing over the d_head dimension
-                unhooked_result = (z * w).sum(-2)
 
                 result = self.hook_result(unhooked_result)  # [batch, pos, head_index, d_model]
             out = (
