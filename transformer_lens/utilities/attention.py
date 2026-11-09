@@ -21,10 +21,13 @@ def simple_attn_linear(
     if input.device != b.device:
         b = b.to(input.device)
 
-    w = einops.rearrange(w, "head_index d_model d_head -> (head_index d_head) d_model")
-    b_ = einops.rearrange(b, "head_index d_head -> (head_index d_head)")
+    # Use native PyTorch F.linear for significant speedup, avoiding rearrange overhead.
+    # w: H M D -> (H D) M
+    w_reshaped = w.transpose(1, 2).reshape(-1, w.size(1))
+    b_reshaped = b.reshape(-1)
 
-    return F.linear(input, w, b_).reshape(input.shape[0], input.shape[1], b.shape[0], b.shape[1])
+    out = F.linear(input, w_reshaped, b_reshaped)  # B P (H D)
+    return out.view(*input.shape[:-1], w.shape[0], w.shape[2])
 
 
 def complex_attn_linear(
@@ -37,9 +40,6 @@ def complex_attn_linear(
     This is almost the same as simple_attn_linear, but the input tensor has an extra head_index dimension, used when calculating the input of each attention head separately.
     """
 
-    result = einops.einsum(
-        input,
-        w,
-        "batch pos head_index d_model, head_index d_model d_head -> batch pos head_index d_head",
-    )
+    # Use native PyTorch einsum for significant speedup over einops.einsum
+    result = torch.einsum("... h m, h m d -> ... h d", input, w)
     return result + b

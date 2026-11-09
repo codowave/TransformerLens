@@ -1,0 +1,3 @@
+## 2024-11-10 - Native torch.einsum is faster than einops.einsum
+**Learning:** `einops.einsum` adds a significant amount of overhead due to parsing the multi-character string dimensions on every call. `torch.einsum` using single character labels (`... h m, h m d -> ... h d`) bypasses this and executes much faster on hot paths like attention blocks. Also, native PyTorch `F.linear` combined with `reshape` avoids `einops.rearrange` overhead.
+**Action:** Always prefer `torch.einsum` for simple dimension matching where labels can be single characters, and use `transpose`/`reshape` over `einops.rearrange` for high-frequency operations. Note that `torch.einsum` doesn't support multi-character strings.
