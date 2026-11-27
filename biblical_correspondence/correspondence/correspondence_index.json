@@ -250,11 +250,24 @@
       "match_type": "thematic",
       "verified": false,
       "status": "unverified_reference",
-      "note": "Web経由の原文照合不可。柳瀬訳または信頼できる原典で直接確認待ち。text フィールドは記憶合成であり原文引用ではない。fp-2 の棄却根拠には使用不可。参照候補として索引に保持。照合後に verified: true / status: confirmed_reference に昇格可能。",
+      "note": "Web経由の原文照合不可。柳瀬訳または信頼できる原典で直接確認待ち。text フィールドは記憶合成であり原文引用ではない。fp-2 の棄却根拠には使用不可。参照候補として索引に保持。照合後に verified: true / status: confirmed_reference に昇格可能。 ／ AI照合（2026-11-28）：番号は合うが、受容が受け手の形で決まるという文は DLW 55 に見当たらない。",
       "language": "en",
       "source": "Divine Love and Wisdom §55 (E. Swedenborg, public domain) — section reference unverified",
       "falsification_relevance": "fp-2",
-      "falsification_direction": "challenges"
+      "falsification_direction": "challenges",
+      "ai_source_check": {
+        "date": "2026-11-28",
+        "by": "AI (Claude)",
+        "method": "AIが公開テキストのページを開き、要約道具（WebFetch）経由で短い抜粋（1か所125字まで）と語の有無を確かめた。各段落を全文・一字ずつ照らしたものではない。verified の根拠にしない（AGENTS.md）。",
+        "sources": ["Ager 訳 Standard Edition（Project Gutenberg #16627） DLW 55", "eswedenborg.com ラテン語本文（l10704、版名の記載なし） DLW 55"],
+        "result": "not_supporting",
+        "found": [
+          "heading (Latin): \"QUOD OMNIA IN UNIVERSO CREATO SINT DIVINI AMORIS ET DIVINAE SAPIENTIAE DEI HOMINIS RECIPIENTIA.\"",
+          "\"that which is created in God from God is not continuous from Him\"（創造の連続性の否定）",
+          "forma / formam / secundum / receptaculum は見当たらない"
+        ],
+        "notes": "DLW 55-57 の範囲に「形が受容を決める」という文は見当たらない（DLW 57 は「秩序の法則の適用」に応じて受けると述べる）。"
+      }
     },
     {
       "id": "DLW.56",
@@ -267,11 +280,24 @@
       "match_type": "thematic",
       "verified": false,
       "status": "unverified_reference",
-      "note": "Web経由の原文照合不可。柳瀬訳または信頼できる原典で直接確認待ち。text フィールドは記憶合成であり原文引用ではない（ruby/crystal/coal analogy 等は原典未確認）。fp-2 の棄却根拠には使用不可。参照候補として索引に保持。照合後に verified: true / status: confirmed_reference に昇格可能。",
+      "note": "Web経由の原文照合不可。柳瀬訳または信頼できる原典で直接確認待ち。text フィールドは記憶合成であり原文引用ではない（ruby/crystal/coal analogy 等は原典未確認）。fp-2 の棄却根拠には使用不可。参照候補として索引に保持。照合後に verified: true / status: confirmed_reference に昇格可能。 ／ AI照合（2026-11-28）：番号は合うが、受容の質が受け手の形で決まるという文、ruby/crystal/coal の比喩は DLW 56 に見当たらない。",
       "language": "en",
       "source": "Divine Love and Wisdom §56 (E. Swedenborg, public domain) — section reference unverified",
       "falsification_relevance": "fp-2",
-      "falsification_direction": "challenges"
+      "falsification_direction": "challenges",
+      "ai_source_check": {
+        "date": "2026-11-28",
+        "by": "AI (Claude)",
+        "method": "AIが公開テキストのページを開き、要約道具（WebFetch）経由で短い抜粋（1か所125字まで）と語の有無を確かめた。各段落を全文・一字ずつ照らしたものではない。verified の根拠にしない（AGENTS.md）。",
+        "sources": ["Ager 訳 Standard Edition（Project Gutenberg #16627） DLW 56", "eswedenborg.com ラテン語本文（l10704、版名の記載なし） DLW 56"],
+        "result": "not_supporting",
+        "found": [
+          "\"Omne Creatum ex ea origine est tale in sua natura, ut sit recipiens Dei, non per continuum sed per contiguum\"",
+          "\"per conjunctionem illam est sicut imago Dei in speculo\"",
+          "forma / formam / secundum formam は見当たらない"
+        ],
+        "notes": "「連続でなく接触による」は離散性の論点に関わりうるが、注記の主張（形による受容）とは別。"
+      }
     },
     {
       "id": "DLW.57",
@@ -289,34 +315,66 @@
       "falsification_direction": "challenges"
     },
     {
-      "id": "DLW.319",
+      "id": "DLW.184-185",
       "work": "DLW",
-      "section": 319,
+      "section": 184,
       "title": "Divine Love and Wisdom",
       "bible_refs": [],
-      "keywords": ["discrete degrees", "continuous degrees", "degrees of kind", "degrees of quantity", "influx", "gradation"],
-      "text": "DLW 319: Swedenborg distinguishes two fundamentally different kinds of degrees: (1) 'Discrete degrees' or degrees of kind — like the difference between the natural, spiritual, and celestial. There is no continuous transition between these; they are qualitatively different in the way that the three kingdoms (mineral, vegetable, animal) are different. (2) 'Continuous degrees' or degrees of quantity — like the gradation from bright to dim, or hot to cold within a single domain. The three heavens, the three degrees of the human mind, and the three correspondence layers are all DISCRETE degrees, not continuous gradations.",
+      "keywords": ["discrete degrees", "continuous degrees", "degrees of height", "degrees of breadth", "gradation"],
+      "text": "[AI照合の抜粋・人の照合待ち] DLW 184 (heading): \"DEGREES ARE OF A TWOFOLD KIND, DEGREES OF HEIGHT AND DEGREES OF BREADTH.\" Continuous degrees are \"precisely like the gradations of light to shade, or of heat to cold\"; \"But discrete degrees are entirely different\". DLW 185: \"The dimension which consists of discrete degrees is called height\"; \"the dimension that consists of continuous degrees is called breadth\".",
       "match_type": "thematic",
-      "note": "DLW 319 is the definitive statement on discrete vs. continuous degrees. The three correspondence layers (celestial/spiritual/natural) are discrete degrees — there is no probabilistic continuum between them. This directly challenges any model (like softmax) that produces continuous probability distributions across these layers.",
+      "verified": false,
+      "status": "unverified_reference",
+      "note": "出典で言えること（AI抜粋）：度には離散度（高さの度）と連続度（幅の度）の二種があり、連続度は光から陰・熱から冷への漸次の変化のようなもの。解釈（原文の言葉ではない）：対応の三層（天界・霊的・自然）が離散度であること、softmax の連続確率分布と構造的に合わないこと。三層＝離散度の結びつけは DLW 184-185 の抜粋では確かめていない（三天界と離散の関係は HH.38 を参照）。旧 id DLW.319 は番号違い：DLW 319 の実際の内容は「造られた宇宙の万物は用の点で人間を像として映す」で、度の話はない。",
       "language": "en",
-      "source": "Divine Love and Wisdom §319 (E. Swedenborg, public domain)",
+      "source": "Divine Love and Wisdom §184-185 (E. Swedenborg, public domain) — AI照合のみ、人の照合待ち",
+      "previous_id": "DLW.319",
       "falsification_relevance": "fp-2",
-      "falsification_direction": "challenges"
+      "falsification_direction": "challenges",
+      "ai_source_check": {
+        "date": "2026-11-28",
+        "by": "AI (Claude)",
+        "method": "AIが公開テキストのページを開き、要約道具（WebFetch）経由で短い抜粋（1か所125字まで）と語の有無を確かめた。各段落を全文・一字ずつ照らしたものではない。verified の根拠にしない（AGENTS.md）。",
+        "sources": ["sacred-texts.com（訳者表記なし） DLW 151-200 / 301-350", "eswedenborg.com ラテン語本文（l10704、版名の記載なし） DLW 319"],
+        "result": "renumbered",
+        "found": [
+          "DLW 319 (Latin heading): \"QUOD OMNIA UNIVERSI CREATI EX USIBUS SPECTATA REFERANT IN IMAGINE HOMINEM; ET QUOD ID TESTETUR QUOD DEUS SIT HOMO.\"",
+          "DLW 319 に gradus / discreti / continui / altitudinis / latitudinis は見当たらない",
+          "DLW 184-185 に上記 text の抜粋あり（英訳のみ。ラテン語は未確認）"
+        ],
+        "notes": "旧 text にあった「degrees of kind」「三つの王国（鉱物・植物・動物）のように違う」は DLW 184-185 の抜粋では確かめていない。"
+      }
     },
     {
-      "id": "DLW.321",
+      "id": "DLW.189",
       "work": "DLW",
-      "section": 321,
+      "section": 189,
       "title": "Divine Love and Wisdom",
       "bible_refs": [],
-      "keywords": ["discrete degrees", "prior", "posterior", "simultaneous", "vertical", "horizontal"],
-      "text": "DLW 321: The discrete degrees are prior, posterior, and ultimate (or first, middle, last). These stand in vertical relation to each other — the prior causes the posterior, the posterior the ultimate. This causal direction is not reversible. Continuous degrees (like brightness) are horizontal — any point can be made brighter or dimmer without changing its kind. The correspondence layers are vertical (discrete), not horizontal (continuous). Therefore, attention mechanisms operating on continuous-valued probability distributions are structurally different from the vertical, discrete-degree architecture of correspondence.",
+      "keywords": ["discrete degrees", "continuous degrees", "degrees of height", "end", "cause", "effect", "succession"],
+      "text": "[AI照合の抜粋・人の照合待ち] DLW 189 (heading): \"DEGREES OF HEIGHT ARE HOMOGENEOUS, AND ONE IS FROM THE OTHER IN SUCCESSION LIKE END, CAUSE, AND EFFECT.\" \"As degrees of breadth, that is continuous degrees, are like gradations from light to shade, from heat to cold\"; \"while degrees of height, or discrete degrees, are not\".",
       "match_type": "thematic",
-      "note": "DLW 321: vertical (discrete/causal) vs. horizontal (continuous/quantitative). Softmax produces a horizontal continuous distribution; correspondence operates in vertical discrete degrees. This is the structural core of the fp-2 challenge.",
+      "verified": false,
+      "status": "unverified_reference",
+      "note": "出典で言えること（AI抜粋）：高さの度（離散度）は同質で、目的・原因・結果のように一つが他から順に出る。連続度は光から陰への漸次の変化のようなもの。解釈（原文の言葉ではない）：これを「先・後・末」「垂直／水平」と言い換えること、因果が非可逆であること、softmax が水平的で対応と構造的に違うこと。旧 id DLW.321 は番号違い：DLW 321 の実際の内容は「霊界は外観が自然界とまったく同じ」（ラテン語・Rogers 訳・sacred-texts で一致）。",
       "language": "en",
-      "source": "Divine Love and Wisdom §321 (E. Swedenborg, public domain)",
+      "source": "Divine Love and Wisdom §189 (E. Swedenborg, public domain) — AI照合のみ、人の照合待ち",
+      "previous_id": "DLW.321",
       "falsification_relevance": "fp-2",
-      "falsification_direction": "challenges"
+      "falsification_direction": "challenges",
+      "ai_source_check": {
+        "date": "2026-11-28",
+        "by": "AI (Claude)",
+        "method": "AIが公開テキストのページを開き、要約道具（WebFetch）経由で短い抜粋（1か所125字まで）と語の有無を確かめた。各段落を全文・一字ずつ照らしたものではない。verified の根拠にしない（AGENTS.md）。",
+        "sources": ["sacred-texts.com（訳者表記なし） DLW 151-200 / 301-350", "Rogers 訳（eswedenborg.com d10704）DLW 321", "eswedenborg.com ラテン語本文（l10704、版名の記載なし） DLW 321"],
+        "result": "renumbered",
+        "found": [
+          "DLW 321 (Latin): \"Sciendum est, quod Mundus spiritualis in externa apparentia sit prorsus similis Mundo naturali\"",
+          "DLW 321 に gradus / discreti / continui / prius / posterius / ultimum は見当たらない",
+          "DLW 189 に上記 text の抜粋あり（英訳のみ。ラテン語は未確認）"
+        ],
+        "notes": "「この因果は逆転しない」は DLW 189 の抜粋では確かめていない。"
+      }
     },
     {
       "id": "DLW.65",
@@ -349,19 +407,35 @@
       "falsification_direction": "challenges"
     },
     {
-      "id": "HH.23",
+      "id": "HH.38",
       "work": "HH",
-      "section": 23,
+      "section": 38,
       "title": "Heaven and Hell",
       "bible_refs": [],
-      "keywords": ["three heavens", "discrete", "inmost", "middle", "outermost", "degrees", "celestial", "spiritual", "natural"],
-      "text": "HH 23: There are three heavens — the inmost or third heaven (celestial), the middle or second heaven (spiritual), and the outermost or first heaven (natural). These are not separated by continuous gradation but by discrete degrees of kind. An angel of the third heaven is not merely 'more' than an angel of the first heaven — they are different in kind, like the difference between an animal and a plant. The three heavens correspond to the three degrees of the human mind: celestial (will/love), spiritual (intellect/truth), natural (sensory/exterior). These discrete degrees are the structural basis of the entire correspondence doctrine.",
+      "keywords": ["three heavens", "discrete", "continuous", "degrees", "inmost", "middle", "outmost", "interior", "exterior"],
+      "text": "[AI照合の抜粋・人の照合待ち] HH 29: there are three heavens, \"an inmost or third, a middle or second, and an outmost or first\", \"entirely distinct from each other\". HH 38: \"Only he who knows how degrees are related to Divine order can comprehend how the heavens are distinct\"; \"the relation of what is interior to what is exterior is discrete, not continuous\"; continuous degrees are like \"the degrees of the waning of a light\".",
       "match_type": "thematic",
-      "note": "HH 23: three heavens = three discrete degrees, not continuous spectrum. The structural basis for correspondence. Any model claiming to correspond to these layers must be discrete in kind, not continuous in quantity.",
+      "verified": false,
+      "status": "unverified_reference",
+      "note": "出典で言えること（AI抜粋）：天界は三つで互いに全く別個（HH 29）。天界の区別は度の理解を要し、内なるものと外なるものの関係は離散で連続ではない（HH 38）。確かめていない：「第三天界の天使は第一天界の天使と動物と植物ほど種類が違う」という比喩（HH 29 には無く、HH 29 の比喩は頭・胴・足と家の上中下の階）、三天界と心の三つの度の対応。解釈（原文の言葉ではない）：対応の三層に写す模型は量でなく種類で離散でなければならず、softmax と合わないこと。旧 id HH.23 は番号違い：HH 23 の実際の内容は「天的王国の愛は主への愛、霊的王国の愛は隣人愛」で、三天界も度も出てこない。",
       "language": "en",
-      "source": "Heaven and Hell §23 (E. Swedenborg, public domain)",
+      "source": "Heaven and Hell §29, §38 (E. Swedenborg, public domain) — AI照合のみ、人の照合待ち",
+      "previous_id": "HH.23",
       "falsification_relevance": "fp-2",
-      "falsification_direction": "challenges"
+      "falsification_direction": "challenges",
+      "ai_source_check": {
+        "date": "2026-11-28",
+        "by": "AI (Claude)",
+        "method": "AIが公開テキストのページを開き、要約道具（WebFetch）経由で短い抜粋（1か所125字まで）と語の有無を確かめた。各段落を全文・一字ずつ照らしたものではない。verified の根拠にしない（AGENTS.md）。",
+        "sources": ["Ager 訳（e-swedenborg.com d5399） HH 23 / 29 / 38", "eswedenborg.com ラテン語本文（l5399） HH 23"],
+        "result": "renumbered",
+        "found": [
+          "HH 23 (Latin): \"Amor in quo sunt qui in regno caelesti, vocatur amor caelestis; et amor in quo sunt qui in regno spirituali, vocatur amor\"",
+          "HH 23 に tres caeli / gradus / discreti は見当たらない",
+          "HH 29・38 に上記 text の抜粋あり（英訳のみ。ラテン語は未確認）"
+        ],
+        "notes": "HH 29 は「discrete degrees」の語を使わず、他の番号も指していない（AI抜粋の範囲で）。"
+      }
     },
     {
       "id": "HH.208",
@@ -400,13 +474,29 @@
       "title": "Divine Love and Wisdom",
       "bible_refs": ["1John.4.8"],
       "keywords": ["love", "wisdom", "God", "esse", "unity", "undivided", "not attributes"],
-      "text": "DLW 4: God is not a being who 'has' love and wisdom as separable attributes; God IS love and wisdom as esse (being itself). Love and wisdom cannot be divided or distributed — they are one in the Divine. What appears as divided reception (one angel receiving more love, another more truth) is a consequence of the form of the receiver, not of any division in the Divine itself. The Divine influx is always complete and undivided; what varies is the adequacy of the receptacle. This means 'partial reception' is not analogous to a probability weight less than 1.0 — it is a qualitative adequacy of form.",
+      "text": "[UNVERIFIED SYNTHESIS] DLW 4: God is not a being who 'has' love and wisdom as separable attributes; God IS love and wisdom as esse (being itself). Love and wisdom cannot be divided or distributed — they are one in the Divine. What appears as divided reception (one angel receiving more love, another more truth) is a consequence of the form of the receiver, not of any division in the Divine itself. The Divine influx is always complete and undivided; what varies is the adequacy of the receptacle. This means 'partial reception' is not analogous to a probability weight less than 1.0 — it is a qualitative adequacy of form.",
       "match_type": "thematic",
-      "note": "DLW 4: the Divine influx is undivided — there is no 'distribution' at the source. Reception is qualitative (adequate/inadequate form), not quantitative (probability weight). Softmax normalization distributes attention weights summing to 1.0; the correspondence model has no such normalization.",
+      "verified": false,
+      "status": "unverified_reference",
+      "note": "DLW 4: the Divine influx is undivided — there is no 'distribution' at the source. Reception is qualitative (adequate/inadequate form), not quantitative (probability weight). Softmax normalization distributes attention weights summing to 1.0; the correspondence model has no such normalization. ／ AI照合（2026-11-28）：番号は合う。「Divinum est unum et non dividuum」はあるが創造を論じる文脈。受け手の形で受け方の差が生じるという主張は DLW 4 に見当たらない。text は記憶合成として扱う。",
       "language": "en",
       "source": "Divine Love and Wisdom §4 (E. Swedenborg, public domain)",
       "falsification_relevance": "fp-2",
-      "falsification_direction": "challenges"
+      "falsification_direction": "challenges",
+      "ai_source_check": {
+        "date": "2026-11-28",
+        "by": "AI (Claude)",
+        "method": "AIが公開テキストのページを開き、要約道具（WebFetch）経由で短い抜粋（1か所125字まで）と語の有無を確かめた。各段落を全文・一字ずつ照らしたものではない。verified の根拠にしない（AGENTS.md）。",
+        "sources": ["Ager 訳 Standard Edition（Project Gutenberg #16627） DLW 4", "eswedenborg.com ラテン語本文（l10704、版名の記載なし） DLW 4"],
+        "result": "partial",
+        "found": [
+          "heading (Latin): \"QUOD DEUS SOLUS ITA DOMINUS SIT IPSE AMOR, QUIA EST IPSA VITA; ET QUOD ANGELI ET HOMINES SINT RECIPIENTES VITAE.\"",
+          "\"quia Divinum est unum et non dividuum\"（Ager: \"because the Divine is one and indivisible\"）— 創造の文脈",
+          "\"ita formatis, ut illis Divinum possit inesse\"（Ager: \"and so formed that the Divine can be in them\"）",
+          "受け手が多く／少なく受ける、受け方の差が形から生じる、という文は見当たらない"
+        ],
+        "notes": "「不分割」は合うが、主張の中心（部分的な受容は確率の重みでなく形の適否）は支えられていない。"
+      }
     },
     {
       "id": "AC.6068",
